@@ -22,9 +22,9 @@ setup(
         "flax",
         "optax",
         "numpy",
-        "matplotlib",
-        "wandb",
         "flask",
+        "pymysql",
+        "anthropic",
     ],
     extras_require={
         "dev": ["pytest", "black", "flake8"],

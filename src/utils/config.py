@@ -24,7 +24,6 @@ class Config:
         gradient_clip: Maximum absolute value for gradient clipping.
         weight_decay: Weight decay coefficient used by the optimizer.
         log_every: Number of steps between progress log lines.
-        use_wandb: Whether to log metrics to Weights & Biases.
 
     Example:
         >>> config = Config(hidden_dim=64, output_dim=1, num_layers=2)
@@ -54,4 +53,3 @@ class Config:
 
     # Logging
     log_every: int = 100
-    use_wandb: bool = False

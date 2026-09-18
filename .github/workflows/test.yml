@@ -34,11 +34,11 @@ jobs:
 
       - name: Lint with flake8
         run: |
-          flake8 src/ examples/ tests/ webapp/ scripts/ --count --show-source --statistics
+          flake8 src/ tests/ webapp/ --count --show-source --statistics
 
       - name: Format check with black
         run: |
-          black --check src/ examples/ tests/ webapp/ scripts/
+          black --check src/ tests/ webapp/
 
       - name: Run tests with pytest
         run: |

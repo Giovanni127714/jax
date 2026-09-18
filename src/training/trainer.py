@@ -256,32 +256,11 @@ class Trainer:
                         message += f" | val_metric: {metrics['val_metric']:.4f}"
                     print(message)
 
-                    if self.config.use_wandb:
-                        self._log_wandb(step, loss, metrics)
-
                     if on_log is not None:
                         on_log(step, total_steps, float(loss), metrics)
 
         self.state = state
         return self.history
-
-    def _log_wandb(
-        self, step: int, loss: jnp.ndarray, metrics: Dict[str, float]
-    ) -> None:
-        """Logs metrics to Weights & Biases, if installed and active.
-
-        Args:
-            step: Current global training step.
-            loss: Training loss for the current step.
-            metrics: Validation metrics dict from ``evaluate``.
-        """
-        try:
-            import wandb
-        except ImportError:
-            return
-
-        if wandb.run is not None:
-            wandb.log({"loss": float(loss), **metrics}, step=step)
 
     def save_checkpoint(self, state: TrainState, path: str) -> None:
         """Saves model parameters, step count, and config to disk.
