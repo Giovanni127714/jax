@@ -284,12 +284,12 @@ body {
 
 .composer {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 10px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 20px;
-  padding: 11px 11px 11px 18px;
+  padding: 9px 11px 9px 18px;
   box-shadow: 0 4px 18px color-mix(in srgb, var(--accent) 7%, transparent), var(--shadow-sm);
   transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
 }
@@ -303,7 +303,6 @@ body {
   height: 18px;
   color: var(--text-muted);
   flex-shrink: 0;
-  margin-bottom: 8px;
   transition: color 0.18s ease;
 }
 .composer:focus-within .composer-icon { color: var(--accent); }
@@ -318,7 +317,8 @@ body {
   font-size: 0.93rem;
   max-height: 140px;
   line-height: 1.4;
-  padding-top: 5px;
+  padding: 0;
+  margin: 0;
 }
 .composer textarea::placeholder { color: var(--text-muted); }
 
