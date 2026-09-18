@@ -29,6 +29,25 @@ python examples/01_regression.py
 python examples/02_classification.py
 ```
 
+## Web UI
+
+The easiest way to use this project is through the local browser dashboard
+in [webapp/](webapp/) — no Python code required. It lets you configure and
+start a training run, watch loss/accuracy update live, and test the trained
+model interactively, all from the browser.
+
+```bash
+python webapp/app.py
+```
+
+This opens `http://127.0.0.1:5000` automatically. On Windows you can also
+just double-click [run_server.bat](run_server.bat).
+
+There are also two minimal CLI helpers for quick checks without the UI:
+[play.py](play.py) (`play.bat`) trains a small model and lets you type
+values to see predictions in the terminal, and `test.bat` runs the test
+suite.
+
 ## Architecture
 
 ```
@@ -37,6 +56,7 @@ src/
 ├── training/   Loss functions, metrics, TrainState, and the Trainer class
 ├── data/       Synthetic data generators (regression & classification)
 └── utils/      Config dataclass and shared utilities
+webapp/         Local Flask dashboard: train and test the model in a browser
 examples/       Standalone, runnable training scripts
 tests/          Unit tests for all core modules
 configs/        Default hyperparameters and W&B sweep configs
@@ -147,8 +167,8 @@ training pipeline:
 
 ## Contributing
 
-- Format code: `black src/ examples/ tests/`
-- Lint: `flake8 src/ examples/ tests/`
+- Format code: `black src/ examples/ tests/ webapp/ play.py`
+- Lint: `flake8 src/ examples/ tests/ webapp/ play.py`
 - Add tests for new features
 - Follow Google-style docstrings
 
