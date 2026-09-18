@@ -1,0 +1,25 @@
+# W&B sweep configuration for hyperparameter tuning on the
+# classification example. Launch with:
+#   wandb sweep configs/classification.yaml
+#   wandb agent <sweep_id>
+
+name: classification-sweep
+method: bayes
+metric:
+  name: val_metric
+  goal: maximize
+parameters:
+  learning_rate:
+    min: 0.0001
+    max: 0.01
+  hidden_dim:
+    values: [64, 128, 256]
+  num_layers:
+    values: [2, 3, 4]
+  dropout:
+    min: 0.0
+    max: 0.3
+command:
+  - ${env}
+  - python
+  - examples/03_with_wandb.py
