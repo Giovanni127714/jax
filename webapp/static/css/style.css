@@ -776,6 +776,8 @@ canvas.chat-chart { width: 100%; height: auto; display: block; }
 .modal-close:hover { background: var(--accent-soft); color: var(--accent); }
 
 .modal-body {
+  flex: 1;
+  min-height: 0;
   padding: 8px 26px 26px;
   overflow-y: auto;
   background: radial-gradient(480px 160px at 50% 0%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 75%);

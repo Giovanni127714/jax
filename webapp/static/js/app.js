@@ -295,7 +295,7 @@
   }
 
   function renderTrainForm() {
-    trainModalBody.className = "";
+    trainModalBody.className = "modal-body";
     trainModalBody.innerHTML = trainFormHtml(trainModalTask);
 
     trainModalBody.querySelectorAll(".train-task-btn").forEach((btn) => {
@@ -361,7 +361,7 @@
 
   function showTrainProgressInModal(numSteps) {
     const shell = renderTrainingCardShell(numSteps);
-    trainModalBody.className = "train-progress-view";
+    trainModalBody.className = "modal-body train-progress-view";
     trainModalBody.innerHTML = shell.html;
     pollTraining(shell.counter).then(() => {
       const doneNote = document.createElement("p");
