@@ -3,6 +3,12 @@
 Connects to the MySQL server bundled with Laragon (root / no password by
 default). Override via DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME env vars
 if your setup differs.
+
+Opening a fresh TCP+auth connection per query costs ~30ms even to a local
+server. Route handlers reuse one connection for the whole request (via
+Flask's request-scoped `g`), closed automatically in app.py's
+teardown_appcontext hook; init_db() runs before any request exists, so it
+manages its own short-lived connections instead.
 """
 
 import json
@@ -10,6 +16,7 @@ import os
 from typing import Any, Dict, List, Optional
 
 import pymysql
+from flask import g
 from pymysql.cursors import DictCursor
 
 DB_HOST = os.environ.get("DB_HOST", "127.0.0.1")
@@ -34,8 +41,26 @@ def _connect(with_db: bool = True) -> pymysql.connections.Connection:
     )
 
 
+def _conn() -> pymysql.connections.Connection:
+    """Request-scoped connection: one per Flask request, reused across
+    every db.py call within it instead of opening a fresh one each time."""
+    if "db_conn" not in g:
+        g.db_conn = _connect()
+    return g.db_conn
+
+
+def close_request_connection(_exception: Optional[BaseException] = None) -> None:
+    """Registered as app.teardown_appcontext; closes the request's connection."""
+    conn = g.pop("db_conn", None)
+    if conn is not None:
+        conn.close()
+
+
 def init_db() -> None:
     """Creates the database/tables if needed, and migrates older schemas.
+
+    Runs once at startup, outside any request context, so it manages its
+    own connections rather than using the request-scoped `_conn()`.
 
     Safe to call on every app startup: every statement is idempotent, and
     the messages->conversations migration only touches rows that don't
@@ -140,36 +165,24 @@ def _backfill_conversations(cur) -> None:
 
 
 def create_user(username: str, password_hash: str) -> int:
-    conn = _connect()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                "INSERT INTO users (username, password_hash) VALUES (%s, %s)",
-                (username, password_hash),
-            )
-            return cur.lastrowid
-    finally:
-        conn.close()
+    with _conn().cursor() as cur:
+        cur.execute(
+            "INSERT INTO users (username, password_hash) VALUES (%s, %s)",
+            (username, password_hash),
+        )
+        return cur.lastrowid
 
 
 def get_user_by_username(username: str) -> Optional[Dict[str, Any]]:
-    conn = _connect()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("SELECT * FROM users WHERE username = %s", (username,))
-            return cur.fetchone()
-    finally:
-        conn.close()
+    with _conn().cursor() as cur:
+        cur.execute("SELECT * FROM users WHERE username = %s", (username,))
+        return cur.fetchone()
 
 
 def get_user_by_id(user_id: int) -> Optional[Dict[str, Any]]:
-    conn = _connect()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("SELECT * FROM users WHERE id = %s", (user_id,))
-            return cur.fetchone()
-    finally:
-        conn.close()
+    with _conn().cursor() as cur:
+        cur.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+        return cur.fetchone()
 
 
 # ---------------------------------------------------------------------
@@ -178,30 +191,22 @@ def get_user_by_id(user_id: int) -> Optional[Dict[str, Any]]:
 
 
 def create_conversation(user_id: int, title: str = DEFAULT_CONVERSATION_TITLE) -> int:
-    conn = _connect()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                "INSERT INTO conversations (user_id, title) VALUES (%s, %s)",
-                (user_id, title),
-            )
-            return cur.lastrowid
-    finally:
-        conn.close()
+    with _conn().cursor() as cur:
+        cur.execute(
+            "INSERT INTO conversations (user_id, title) VALUES (%s, %s)",
+            (user_id, title),
+        )
+        return cur.lastrowid
 
 
 def list_conversations(user_id: int) -> List[Dict[str, Any]]:
-    conn = _connect()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT id, title, created_at, updated_at FROM conversations "
-                "WHERE user_id = %s ORDER BY updated_at DESC",
-                (user_id,),
-            )
-            rows = cur.fetchall()
-    finally:
-        conn.close()
+    with _conn().cursor() as cur:
+        cur.execute(
+            "SELECT id, title, created_at, updated_at FROM conversations "
+            "WHERE user_id = %s ORDER BY updated_at DESC",
+            (user_id,),
+        )
+        rows = cur.fetchall()
     for row in rows:
         row["created_at"] = row["created_at"].isoformat()
         row["updated_at"] = row["updated_at"].isoformat()
@@ -209,53 +214,47 @@ def list_conversations(user_id: int) -> List[Dict[str, Any]]:
 
 
 def get_conversation(conversation_id: int, user_id: int) -> Optional[Dict[str, Any]]:
-    conn = _connect()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT * FROM conversations WHERE id = %s AND user_id = %s",
-                (conversation_id, user_id),
-            )
-            return cur.fetchone()
-    finally:
-        conn.close()
+    with _conn().cursor() as cur:
+        cur.execute(
+            "SELECT * FROM conversations WHERE id = %s AND user_id = %s",
+            (conversation_id, user_id),
+        )
+        return cur.fetchone()
 
 
 def rename_conversation(conversation_id: int, title: str) -> None:
-    conn = _connect()
-    try:
-        with conn.cursor() as cur:
+    with _conn().cursor() as cur:
+        cur.execute(
+            "UPDATE conversations SET title = %s WHERE id = %s",
+            (title[:120], conversation_id),
+        )
+
+
+def touch_conversation(conversation_id: int, title: Optional[str] = None) -> None:
+    """Bumps updated_at (for sidebar ordering); optionally renames in the
+    same query, so a fresh conversation's first turn only costs one
+    round-trip instead of two."""
+    with _conn().cursor() as cur:
+        if title is not None:
             cur.execute(
-                "UPDATE conversations SET title = %s WHERE id = %s",
+                "UPDATE conversations SET updated_at = CURRENT_TIMESTAMP, title = %s "
+                "WHERE id = %s",
                 (title[:120], conversation_id),
             )
-    finally:
-        conn.close()
-
-
-def touch_conversation(conversation_id: int) -> None:
-    conn = _connect()
-    try:
-        with conn.cursor() as cur:
+        else:
             cur.execute(
                 "UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = %s",
                 (conversation_id,),
             )
-    finally:
-        conn.close()
 
 
 def delete_conversation(conversation_id: int, user_id: int) -> bool:
-    conn = _connect()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                "DELETE FROM conversations WHERE id = %s AND user_id = %s",
-                (conversation_id, user_id),
-            )
-            return cur.rowcount > 0
-    finally:
-        conn.close()
+    with _conn().cursor() as cur:
+        cur.execute(
+            "DELETE FROM conversations WHERE id = %s AND user_id = %s",
+            (conversation_id, user_id),
+        )
+        return cur.rowcount > 0
 
 
 # ---------------------------------------------------------------------
@@ -270,37 +269,29 @@ def save_message(
     content: str,
     attachment: Optional[Dict[str, Any]] = None,
 ) -> int:
-    conn = _connect()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                "INSERT INTO messages (user_id, conversation_id, role, content, attachment) "
-                "VALUES (%s, %s, %s, %s, %s)",
-                (
-                    user_id,
-                    conversation_id,
-                    role,
-                    content,
-                    json.dumps(attachment) if attachment else None,
-                ),
-            )
-            return cur.lastrowid
-    finally:
-        conn.close()
+    with _conn().cursor() as cur:
+        cur.execute(
+            "INSERT INTO messages (user_id, conversation_id, role, content, attachment) "
+            "VALUES (%s, %s, %s, %s, %s)",
+            (
+                user_id,
+                conversation_id,
+                role,
+                content,
+                json.dumps(attachment) if attachment else None,
+            ),
+        )
+        return cur.lastrowid
 
 
 def get_messages(conversation_id: int, limit: int = 200) -> List[Dict[str, Any]]:
-    conn = _connect()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT role, content, attachment, created_at FROM messages "
-                "WHERE conversation_id = %s ORDER BY id ASC LIMIT %s",
-                (conversation_id, limit),
-            )
-            rows = cur.fetchall()
-    finally:
-        conn.close()
+    with _conn().cursor() as cur:
+        cur.execute(
+            "SELECT role, content, attachment, created_at FROM messages "
+            "WHERE conversation_id = %s ORDER BY id ASC LIMIT %s",
+            (conversation_id, limit),
+        )
+        rows = cur.fetchall()
 
     for row in rows:
         if row["attachment"]:

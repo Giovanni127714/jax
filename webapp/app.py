@@ -60,6 +60,7 @@ def _get_or_create_secret_key() -> str:
 
 app.secret_key = _get_or_create_secret_key()
 db.init_db()
+app.teardown_appcontext(db.close_request_connection)
 
 
 @app.context_processor
@@ -462,10 +463,10 @@ def chat():
         action = None
 
     db.save_message(user_id, conversation_id, "assistant", reply, attachment=action)
-    db.touch_conversation(conversation_id)
+    title = None
     if is_first_message:
         title = user_message[:60] + ("…" if len(user_message) > 60 else "")
-        db.rename_conversation(conversation_id, title)
+    db.touch_conversation(conversation_id, title=title)
 
     return jsonify(
         {"reply": reply, "action": action, "conversation_id": conversation_id}

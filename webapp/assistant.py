@@ -7,7 +7,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import anthropic
 
-MODEL = "claude-sonnet-5"
+MODEL = "claude-haiku-4-5-20251001"  # fast model: this app is latency-sensitive
 MAX_TOKENS = 1024
 MAX_TOOL_ROUNDS = 4
 
