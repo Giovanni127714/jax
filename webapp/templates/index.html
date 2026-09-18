@@ -11,7 +11,10 @@
   <header class="topbar">
     <div class="brand">
       <span class="brand-icon">◆</span>
-      <span class="brand-name">JAX MLP Trainer</span>
+      <div>
+        <div class="brand-name">JAX MLP Assistent</div>
+        <div class="brand-sub">Chat-bediening voor je eigen trainer &mdash; geen taalmodel, een commando-assistent</div>
+      </div>
     </div>
     <div class="status-pill" id="status-pill" data-status="idle">
       <span class="status-dot"></span>
@@ -19,186 +22,21 @@
     </div>
   </header>
 
-  <nav class="tabs">
-    <button class="tab-btn active" data-tab="train">1. Trainen</button>
-    <button class="tab-btn" data-tab="test">2. Testen</button>
-    <button class="tab-btn" data-tab="model">3. Modelinfo</button>
-  </nav>
+  <main class="chat-wrap">
+    <div class="chat-log" id="chat-log"></div>
 
-  <main class="content">
-    <!-- ===================== TRAIN TAB ===================== -->
-    <section id="tab-train" class="tab-panel active">
-      <div class="grid-2">
-        <div class="card">
-          <h2>Configuratie</h2>
-
-          <div class="field-group">
-            <label>Taak</label>
-            <div class="segmented" id="task-toggle">
-              <button type="button" class="segmented-btn active" data-task="regression">Regressie</button>
-              <button type="button" class="segmented-btn" data-task="classification">Classificatie</button>
-            </div>
-            <p class="hint" id="task-hint">
-              Het model leert de formule <code>y = 2·x1 + 3·x2 + ruis</code> te benaderen.
-            </p>
-          </div>
-
-          <form id="train-form" novalidate>
-            <fieldset id="classification-only" class="hidden">
-              <legend>Classificatie</legend>
-              <div class="field">
-                <label for="num_classes">Aantal klassen</label>
-                <input type="number" id="num_classes" min="2" max="20" value="4" />
-              </div>
-            </fieldset>
-
-            <fieldset>
-              <legend>Architectuur</legend>
-              <div class="field-row">
-                <div class="field">
-                  <label for="input_dim">Input-dimensie</label>
-                  <input type="number" id="input_dim" min="1" max="64" value="4" />
-                </div>
-                <div class="field">
-                  <label for="hidden_dim">Hidden-dimensie</label>
-                  <input type="number" id="hidden_dim" min="1" max="1024" value="64" />
-                </div>
-              </div>
-              <div class="field-row">
-                <div class="field">
-                  <label for="num_layers">Aantal lagen</label>
-                  <input type="number" id="num_layers" min="1" max="8" value="2" />
-                </div>
-                <div class="field">
-                  <label for="dropout">Dropout</label>
-                  <input type="number" id="dropout" min="0" max="0.9" step="any" value="0.1" />
-                </div>
-              </div>
-            </fieldset>
-
-            <fieldset>
-              <legend>Training</legend>
-              <div class="field-row">
-                <div class="field">
-                  <label for="num_steps">Aantal stappen</label>
-                  <input type="number" id="num_steps" min="10" max="20000" value="300" />
-                </div>
-                <div class="field">
-                  <label for="batch_size">Batchgrootte</label>
-                  <input type="number" id="batch_size" min="1" max="512" value="32" />
-                </div>
-              </div>
-              <div class="field-row">
-                <div class="field">
-                  <label for="learning_rate">Learning rate</label>
-                  <input type="number" id="learning_rate" min="0.00001" max="1" step="any" value="0.001" />
-                </div>
-                <div class="field">
-                  <label for="num_samples">Aantal samples</label>
-                  <input type="number" id="num_samples" min="16" max="200000" value="1000" />
-                </div>
-              </div>
-            </fieldset>
-
-            <fieldset>
-              <legend>Geavanceerd</legend>
-              <div class="field-row">
-                <div class="field">
-                  <label for="gradient_clip">Gradient clip</label>
-                  <input type="number" id="gradient_clip" min="0.01" max="100" step="any" value="1.0" />
-                </div>
-                <div class="field">
-                  <label for="weight_decay">Weight decay</label>
-                  <input type="number" id="weight_decay" min="0" max="1" step="any" value="0.01" />
-                </div>
-              </div>
-              <div class="field-row">
-                <div class="field">
-                  <label for="log_every">Log elke N stappen</label>
-                  <input type="number" id="log_every" min="1" max="1000" value="10" />
-                </div>
-                <div class="field">
-                  <label for="seed">Random seed</label>
-                  <input type="number" id="seed" min="0" max="999999" value="42" />
-                </div>
-              </div>
-            </fieldset>
-
-            <button type="submit" id="train-btn" class="btn btn-primary btn-full">Start training</button>
-          </form>
-          <p class="error-banner hidden" id="train-error"></p>
-        </div>
-
-        <div class="card">
-          <h2>Voortgang</h2>
-          <div class="progress-row">
-            <div class="progress-track">
-              <div class="progress-fill" id="progress-fill"></div>
-            </div>
-            <span class="progress-label" id="progress-label">0 / 0</span>
-          </div>
-
-          <canvas id="loss-chart" width="640" height="260"></canvas>
-          <div class="legend" id="chart-legend"></div>
-
-          <div id="metric-chart-wrap" class="hidden">
-            <h3>Validatie-accuracy</h3>
-            <canvas id="metric-chart" width="640" height="140"></canvas>
-          </div>
-
-          <h3>Log</h3>
-          <div class="log-console" id="log-console"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===================== TEST TAB ===================== -->
-    <section id="tab-test" class="tab-panel">
-      <div class="grid-2">
-        <div class="card">
-          <h2>Model testen</h2>
-          <p class="hint" id="test-hint">Train eerst een model op het tabblad "Trainen".</p>
-          <div id="predict-inputs" class="predict-inputs"></div>
-          <div class="btn-row">
-            <button type="button" id="randomize-btn" class="btn btn-secondary" disabled>Willekeurig invullen</button>
-            <button type="button" id="predict-btn" class="btn btn-primary" disabled>Voorspel</button>
-          </div>
-        </div>
-
-        <div class="card">
-          <h2>Resultaat</h2>
-          <div id="predict-result" class="predict-result">
-            <p class="hint">Nog geen voorspelling gedaan.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===================== MODEL INFO TAB ===================== -->
-    <section id="tab-model" class="tab-panel">
-      <div class="grid-2">
-        <div class="card">
-          <h2>Architectuur</h2>
-          <table class="data-table" id="layers-table">
-            <thead>
-              <tr><th>Laag</th><th>Input</th><th>Output</th><th>Parameters</th></tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-          <p class="total-params" id="total-params"></p>
-        </div>
-
-        <div class="card">
-          <h2>Actieve configuratie</h2>
-          <pre class="config-dump" id="config-dump">Nog geen model getraind.</pre>
-        </div>
-      </div>
-    </section>
+    <div class="composer-area">
+      <div class="chips" id="chips"></div>
+      <form id="composer-form" class="composer">
+        <textarea
+          id="composer-input"
+          rows="1"
+          placeholder="Typ een bericht, bv. 'train een classificatiemodel' of 'voorspel 1 2 0 0'…"
+        ></textarea>
+        <button type="submit" id="send-btn" class="send-btn" aria-label="Verstuur">➤</button>
+      </form>
+    </div>
   </main>
-
-  <footer class="footer">
-    JAX/Flax MLP Training Framework &middot; lokale webinterface
-  </footer>
 
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
