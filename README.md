@@ -38,10 +38,8 @@ pip install -r requirements.txt
 python webapp/app.py
 ```
 
-This opens `http://127.0.0.1:5000` automatically. On Windows you can also
-just double-click [run_server.bat](run_server.bat). Register an account on
-first visit; your conversations persist across logins. Run
-`test.bat` (or `pytest tests/`) to run the test suite.
+This opens `http://127.0.0.1:5000` automatically. Register an account on
+first visit; your conversations persist across logins.
 
 ## Architecture
 
