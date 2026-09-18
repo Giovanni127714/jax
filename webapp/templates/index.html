@@ -22,7 +22,6 @@
         Nieuw gesprek
       </button>
 
-      <div class="sidebar-section-label">Gesprekken</div>
       <nav class="conversation-list" id="conversation-list"></nav>
 
       <div class="sidebar-footer">
@@ -49,10 +48,16 @@
         <div class="main-topbar-title" id="conversation-title">Nieuw gesprek</div>
       </header>
 
-      <div class="chat-wrap">
+      <div class="chat-wrap" id="chat-wrap">
+        <div class="empty-hero" id="empty-hero" hidden>
+          <h1 class="empty-greeting" id="empty-greeting">Hoi</h1>
+          <p class="empty-sub">Waarmee kan ik je helpen?</p>
+          <div class="empty-composer-mount" id="empty-composer-mount"></div>
+        </div>
+
         <div class="chat-log" id="chat-log"></div>
 
-        <div class="composer-area">
+        <div class="composer-area" id="composer-area">
           <div class="chips" id="chips"></div>
           <form id="composer-form" class="composer">
             <svg class="composer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

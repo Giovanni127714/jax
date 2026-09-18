@@ -2,6 +2,7 @@
   "use strict";
 
   const chatLog = document.getElementById("chat-log");
+  const composerArea = document.getElementById("composer-area");
   const composerForm = document.getElementById("composer-form");
   const composerInput = document.getElementById("composer-input");
   const sendBtn = document.getElementById("send-btn");
@@ -12,6 +13,10 @@
   const sidebar = document.getElementById("sidebar");
   const sidebarToggle = document.getElementById("sidebar-toggle");
   const sidebarBackdrop = document.getElementById("sidebar-backdrop");
+  const chatWrap = document.getElementById("chat-wrap");
+  const emptyHero = document.getElementById("empty-hero");
+  const emptyGreeting = document.getElementById("empty-greeting");
+  const emptyComposerMount = document.getElementById("empty-composer-mount");
 
   let chartCounter = 0;
   let isBusy = false;
@@ -41,39 +46,73 @@
     renderConversationList();
   }
 
+  const DATE_BUCKET_ORDER = ["Vandaag", "Gisteren", "Vorige 7 dagen", "Vorige 30 dagen", "Ouder"];
+
+  function dateBucket(isoString) {
+    const date = new Date(isoString);
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfYesterday = new Date(startOfToday);
+    startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+    const start7 = new Date(startOfToday);
+    start7.setDate(start7.getDate() - 7);
+    const start30 = new Date(startOfToday);
+    start30.setDate(start30.getDate() - 30);
+
+    if (date >= startOfToday) return "Vandaag";
+    if (date >= startOfYesterday) return "Gisteren";
+    if (date >= start7) return "Vorige 7 dagen";
+    if (date >= start30) return "Vorige 30 dagen";
+    return "Ouder";
+  }
+
   function renderConversationList() {
     conversationListEl.innerHTML = "";
     if (conversationsCache.length === 0) {
       conversationListEl.innerHTML = '<div class="conversation-empty">Nog geen gesprekken</div>';
       return;
     }
-    conversationsCache.forEach((conv) => {
-      const item = document.createElement("div");
-      item.className = "conversation-item" + (conv.id === currentConversationId ? " active" : "");
-      item.innerHTML = `
-        <span class="conversation-item-title">${escapeHtml(conv.title)}</span>
-        <button type="button" class="conversation-delete" aria-label="Verwijder gesprek">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6" />
-          </svg>
-        </button>`;
-      item.addEventListener("click", (event) => {
-        if (event.target.closest(".conversation-delete")) return;
-        if (isBusy) return;
-        loadConversation(conv.id);
-        closeSidebar();
+
+    const buckets = new Map(DATE_BUCKET_ORDER.map((label) => [label, []]));
+    conversationsCache.forEach((conv) => buckets.get(dateBucket(conv.updated_at)).push(conv));
+
+    DATE_BUCKET_ORDER.forEach((label) => {
+      const items = buckets.get(label);
+      if (items.length === 0) return;
+
+      const heading = document.createElement("div");
+      heading.className = "sidebar-section-label";
+      heading.textContent = label;
+      conversationListEl.appendChild(heading);
+
+      items.forEach((conv) => {
+        const item = document.createElement("div");
+        item.className = "conversation-item" + (conv.id === currentConversationId ? " active" : "");
+        item.innerHTML = `
+          <span class="conversation-item-title">${escapeHtml(conv.title)}</span>
+          <button type="button" class="conversation-delete" aria-label="Verwijder gesprek">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6" />
+            </svg>
+          </button>`;
+        item.addEventListener("click", (event) => {
+          if (event.target.closest(".conversation-delete")) return;
+          if (isBusy) return;
+          loadConversation(conv.id);
+          closeSidebar();
+        });
+        item.querySelector(".conversation-delete").addEventListener("click", async (event) => {
+          event.stopPropagation();
+          await fetch(`/api/conversations/${conv.id}`, { method: "DELETE" });
+          const wasActive = conv.id === currentConversationId;
+          await refreshConversationList();
+          if (wasActive) {
+            if (conversationsCache.length > 0) loadConversation(conversationsCache[0].id);
+            else startNewConversation();
+          }
+        });
+        conversationListEl.appendChild(item);
       });
-      item.querySelector(".conversation-delete").addEventListener("click", async (event) => {
-        event.stopPropagation();
-        await fetch(`/api/conversations/${conv.id}`, { method: "DELETE" });
-        const wasActive = conv.id === currentConversationId;
-        await refreshConversationList();
-        if (wasActive) {
-          if (conversationsCache.length > 0) loadConversation(conversationsCache[0].id);
-          else startNewConversation();
-        }
-      });
-      conversationListEl.appendChild(item);
     });
   }
 
@@ -97,6 +136,7 @@
       return;
     }
 
+    showActiveChat();
     messages.forEach((msg) => {
       if (msg.role === "user") {
         addUserMessage(msg.content);
@@ -214,6 +254,7 @@
       chip.innerHTML = `<span class="chip-icon">${icon}</span>${escapeHtml(label)}`;
       chip.addEventListener("click", () => {
         if (isBusy) return;
+        showActiveChat();
         addUserMessage(label);
         sendMessage(label);
       });
@@ -228,21 +269,30 @@
     { icon: "📖", label: "Leg uit hoe dit project werkt" },
   ];
 
+  function greetingTimeOfDay() {
+    const hour = new Date().getHours();
+    if (hour < 6) return "Goedenacht";
+    if (hour < 12) return "Goedemorgen";
+    if (hour < 18) return "Goedemiddag";
+    return "Goedenavond";
+  }
+
   function showWelcome() {
-    addAssistantMessage(`
-      <div class="welcome-title">Hoi! 👋</div>
-      <p>Ik ben de JAX MLP Assistent &mdash; een echte Claude-gedreven chatbot die net zo vrij
-      kan converseren als ChatGPT of Claude, én die een MLP kan trainen en testen wanneer je
-      dat vraagt.</p>
-      <p>Vraag me letterlijk alles, of probeer bijvoorbeeld:</p>
-      <p>
-        <code>train een regressiemodel</code><br>
-        <code>train een classificatiemodel met 3 klassen</code><br>
-        <code>voorspel voor 1 2 0 0</code><br>
-        <code>laat de modelarchitectuur zien</code>
-      </p>
-    `);
+    const username = document.querySelector(".user-name")?.textContent?.trim();
+    emptyGreeting.textContent = username
+      ? `${greetingTimeOfDay()}, ${username}`
+      : greetingTimeOfDay();
+    emptyComposerMount.appendChild(composerArea);
+    emptyHero.hidden = false;
+    chatLog.hidden = true;
+    chatLog.innerHTML = "";
     setChips(DEFAULT_CHIPS);
+  }
+
+  function showActiveChat() {
+    emptyHero.hidden = true;
+    chatLog.hidden = false;
+    chatWrap.appendChild(composerArea);
   }
 
   // ---------------------------------------------------------------------
@@ -562,6 +612,7 @@
     if (isBusy) return;
     const text = composerInput.value.trim();
     if (!text) return;
+    showActiveChat();
     addUserMessage(text);
     composerInput.value = "";
     composerInput.style.height = "auto";

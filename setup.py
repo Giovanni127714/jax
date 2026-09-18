@@ -1,6 +1,6 @@
 """Package metadata and installation config for jax-mlp-training."""
 
-from setuptools import find_packages, setup
+from setuptools import find_packages, setup  # type: ignore[reportMissingModuleSource]
 
 with open("README.md", encoding="utf-8") as f:
     long_description = f.read()
