@@ -33,9 +33,21 @@ def _load_dotenv(path: Path) -> None:
 
 _load_dotenv(PROJECT_ROOT / ".env")
 
+import json
+
 import jax
 import jax.numpy as jnp
-from flask import Flask, jsonify, redirect, render_template, request, session, url_for
+from flask import (
+    Flask,
+    Response,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    stream_with_context,
+    url_for,
+)
 
 import assistant
 import auth
@@ -430,6 +442,10 @@ def conversation_messages(conversation_id: int):
     return jsonify({"messages": db.get_messages(conversation_id)})
 
 
+def _sse(event: str, data: Dict[str, Any]) -> str:
+    return f"event: {event}\ndata: {json.dumps(data)}\n\n"
+
+
 @app.route("/api/chat", methods=["POST"])
 @auth.login_required
 def chat():
@@ -454,22 +470,39 @@ def chat():
 
     db.save_message(user_id, conversation_id, "user", user_message)
 
-    try:
-        reply, action = assistant.chat_turn(
-            conversation_history, user_message, _execute_tool
-        )
-    except assistant.AssistantError as exc:
-        reply = str(exc)
-        action = None
+    @stream_with_context
+    def generate():
+        yield _sse("meta", {"conversation_id": conversation_id})
 
-    db.save_message(user_id, conversation_id, "assistant", reply, attachment=action)
-    title = None
-    if is_first_message:
-        title = user_message[:60] + ("…" if len(user_message) > 60 else "")
-    db.touch_conversation(conversation_id, title=title)
+        text_parts: List[str] = []
+        action: Optional[Dict[str, Any]] = None
+        try:
+            for event in assistant.chat_turn_stream(
+                conversation_history, user_message, _execute_tool
+            ):
+                if event["type"] == "text_delta":
+                    text_parts.append(event["text"])
+                    yield _sse("text_delta", {"text": event["text"]})
+                elif event["type"] == "action":
+                    action = event["action"]
+                    yield _sse("action", event["action"])
+        except assistant.AssistantError as exc:
+            text_parts = [str(exc)]
+            yield _sse("text_delta", {"text": text_parts[0]})
 
-    return jsonify(
-        {"reply": reply, "action": action, "conversation_id": conversation_id}
+        reply = "".join(text_parts).strip() or "(geen antwoord)"
+        db.save_message(user_id, conversation_id, "assistant", reply, attachment=action)
+        title = None
+        if is_first_message:
+            title = user_message[:60] + ("…" if len(user_message) > 60 else "")
+        db.touch_conversation(conversation_id, title=title)
+
+        yield _sse("done", {"reply": reply, "action": action})
+
+    return Response(
+        generate(),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 

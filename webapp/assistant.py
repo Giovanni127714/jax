@@ -1,9 +1,15 @@
 """Claude API integration: open-ended conversation plus tool-calling so the
 model can actually operate the MLP trainer when the user asks it to.
+
+Responses stream token-by-token (chat_turn_stream) rather than waiting for
+the full completion: the network+inference round trip to Anthropic is the
+dominant remaining cost in this app, and streaming can't shorten it, but it
+gets text on screen at time-to-first-token instead of time-to-last-token,
+which is what actually reads as "fast" to a person watching it.
 """
 
 import os
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
 
 import anthropic
 
@@ -148,23 +154,27 @@ def _client() -> anthropic.Anthropic:
     return anthropic.Anthropic(api_key=api_key)
 
 
-def chat_turn(
+def chat_turn_stream(
     history: List[Dict[str, str]],
     user_message: str,
     execute_tool: ToolExecutor,
-) -> Tuple[str, Optional[Dict[str, Any]]]:
-    """Runs one full conversational turn, including any tool calls.
+) -> Iterator[Dict[str, Any]]:
+    """Runs one full conversational turn, including any tool calls, as a
+    stream of events.
 
     Args:
         history: Prior turns as [{"role": "user"|"assistant", "content": str}, ...].
         user_message: The new message from the user.
         execute_tool: Callback (tool_name, tool_input) -> (result_for_claude,
-            ui_action). ``ui_action`` (if not None) is surfaced to the caller
-            so the frontend can render rich content (e.g. a live training
-            card) alongside Claude's natural-language reply.
+            ui_action). ``ui_action`` (if not None) is surfaced as an
+            "action" event so the frontend can render rich content (e.g. a
+            live training card) alongside Claude's natural-language reply.
 
-    Returns:
-        A tuple ``(reply_text, ui_action)``.
+    Yields:
+        ``{"type": "text_delta", "text": str}`` as tokens arrive, and
+        ``{"type": "action", "action": dict}`` once a tool call resolves to
+        a UI action. The caller accumulates text_delta chunks for the full
+        reply; nothing further is returned once the generator is exhausted.
     """
     client = _client()
 
@@ -173,37 +183,36 @@ def chat_turn(
     ]
     messages.append({"role": "user", "content": user_message})
 
-    ui_action: Optional[Dict[str, Any]] = None
-
-    for _ in range(MAX_TOOL_ROUNDS):
+    for round_num in range(MAX_TOOL_ROUNDS):
         try:
-            response = client.messages.create(
+            with client.messages.stream(
                 model=MODEL,
                 max_tokens=MAX_TOKENS,
                 system=SYSTEM_PROMPT,
                 tools=TOOLS,
                 messages=messages,
-            )
+            ) as stream:
+                for event in stream:
+                    if event.type == "text":
+                        yield {"type": "text_delta", "text": event.text}
+                final_message = stream.get_final_message()
         except anthropic.APIError as exc:
             raise AssistantError(
                 f"Fout bij aanroepen van de Claude API: {exc}"
             ) from exc
 
-        if response.stop_reason != "tool_use":
-            text_parts = [
-                block.text for block in response.content if block.type == "text"
-            ]
-            return "".join(text_parts).strip() or "(geen antwoord)", ui_action
+        if final_message.stop_reason != "tool_use":
+            return
 
-        messages.append({"role": "assistant", "content": response.content})
+        messages.append({"role": "assistant", "content": final_message.content})
 
         tool_results = []
-        for block in response.content:
+        for block in final_message.content:
             if block.type != "tool_use":
                 continue
             result, action = execute_tool(block.name, block.input or {})
             if action is not None:
-                ui_action = action
+                yield {"type": "action", "action": action}
             tool_results.append(
                 {
                     "type": "tool_result",
@@ -213,8 +222,10 @@ def chat_turn(
             )
         messages.append({"role": "user", "content": tool_results})
 
-    return (
-        "Ik ben te lang bezig geweest met tools aanroepen en stop hier. Probeer het opnieuw of "
-        "formuleer je vraag iets anders.",
-        ui_action,
-    )
+    yield {
+        "type": "text_delta",
+        "text": (
+            "Ik ben te lang bezig geweest met tools aanroepen en stop hier. "
+            "Probeer het opnieuw of formuleer je vraag iets anders."
+        ),
+    }

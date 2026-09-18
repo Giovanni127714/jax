@@ -529,11 +529,18 @@
   // ---------------------------------------------------------------------
   // Sending a message to the Claude-backed assistant
   // ---------------------------------------------------------------------
+  function actionToHtml(action) {
+    if (action.type === "predict") return renderPredictCard(action.result);
+    if (action.type === "model_summary") return renderModelSummaryCard(action.result);
+    return "";
+  }
+
   async function sendMessage(text) {
     isBusy = true;
     sendBtn.disabled = true;
 
     const bubble = addTypingIndicator();
+    const isNewConversation = currentConversationId === null;
 
     let res;
     try {
@@ -549,40 +556,73 @@
       return;
     }
 
-    const data = await res.json();
     if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
       showError(bubble, data.error || "Er ging iets mis.");
       isBusy = false;
       sendBtn.disabled = false;
       return;
     }
 
-    const isNewConversation = currentConversationId === null;
-    currentConversationId = data.conversation_id;
+    let accumulatedText = "";
+    let started = false;
+    let actionHtml = "";
+    let trainingCounter = null;
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const chunks = buffer.split("\n\n");
+      buffer = chunks.pop();
+
+      for (const chunk of chunks) {
+        let eventType = "message";
+        let dataLine = "";
+        for (const line of chunk.split("\n")) {
+          if (line.startsWith("event: ")) eventType = line.slice(7);
+          else if (line.startsWith("data: ")) dataLine += line.slice(6);
+        }
+        if (!dataLine) continue;
+        const parsed = JSON.parse(dataLine);
+
+        if (eventType === "meta") {
+          currentConversationId = parsed.conversation_id;
+        } else if (eventType === "text_delta") {
+          if (!started) {
+            started = true;
+            bubble.innerHTML = "";
+          }
+          accumulatedText += parsed.text;
+          bubble.innerHTML = formatReply(accumulatedText) + actionHtml;
+          scrollToBottom();
+        } else if (eventType === "action") {
+          if (parsed.type === "start_training") {
+            const shell = renderTrainingCardShell(parsed.num_steps);
+            actionHtml = shell.html;
+            trainingCounter = shell.counter;
+            setStatus("training");
+          } else {
+            actionHtml = actionToHtml(parsed);
+          }
+          bubble.innerHTML = formatReply(accumulatedText) + actionHtml;
+          scrollToBottom();
+        } else if (eventType === "done") {
+          if (!started) bubble.innerHTML = formatReply(parsed.reply) + actionHtml;
+        }
+      }
+    }
+
     await refreshConversationList();
     if (isNewConversation) {
       const conv = conversationsCache.find((c) => c.id === currentConversationId);
       setActiveConversationTitle(conv ? conv.title : text.slice(0, 60));
     }
-
-    let extraHtml = "";
-    let trainingCounter = null;
-
-    if (data.action) {
-      if (data.action.type === "predict") {
-        extraHtml = renderPredictCard(data.action.result);
-      } else if (data.action.type === "model_summary") {
-        extraHtml = renderModelSummaryCard(data.action.result);
-      } else if (data.action.type === "start_training") {
-        const shell = renderTrainingCardShell(data.action.num_steps);
-        extraHtml = shell.html;
-        trainingCounter = shell.counter;
-        setStatus("training");
-      }
-    }
-
-    bubble.innerHTML = formatReply(data.reply) + extraHtml;
-    scrollToBottom();
 
     if (trainingCounter !== null) {
       await pollTraining(trainingCounter);
