@@ -395,10 +395,38 @@ def index() -> str:
     return render_template("index.html", username=session.get("username"))
 
 
-@app.route("/api/history")
+def _owned_conversation_or_404(conversation_id: int):
+    conversation = db.get_conversation(conversation_id, auth.current_user_id())
+    if conversation is None:
+        return None
+    return conversation
+
+
+@app.route("/api/conversations", methods=["GET", "POST"])
 @auth.login_required
-def history():
-    return jsonify({"messages": db.get_messages(auth.current_user_id())})
+def conversations():
+    user_id = auth.current_user_id()
+    if request.method == "POST":
+        conversation_id = db.create_conversation(user_id)
+        return jsonify({"id": conversation_id, "title": db.DEFAULT_CONVERSATION_TITLE})
+    return jsonify({"conversations": db.list_conversations(user_id)})
+
+
+@app.route("/api/conversations/<int:conversation_id>", methods=["DELETE"])
+@auth.login_required
+def delete_conversation_route(conversation_id: int):
+    deleted = db.delete_conversation(conversation_id, auth.current_user_id())
+    if not deleted:
+        return jsonify({"error": "Gesprek niet gevonden."}), 404
+    return jsonify({"status": "deleted"})
+
+
+@app.route("/api/conversations/<int:conversation_id>/messages")
+@auth.login_required
+def conversation_messages(conversation_id: int):
+    if _owned_conversation_or_404(conversation_id) is None:
+        return jsonify({"error": "Gesprek niet gevonden."}), 404
+    return jsonify({"messages": db.get_messages(conversation_id)})
 
 
 @app.route("/api/chat", methods=["POST"])
@@ -407,23 +435,41 @@ def chat():
     user_id = auth.current_user_id()
     payload = request.get_json(force=True) or {}
     user_message = (payload.get("message") or "").strip()
+    conversation_id = payload.get("conversation_id")
+
     if not user_message:
         return jsonify({"error": "Leeg bericht."}), 400
 
-    history_rows = db.get_messages(user_id, limit=40)
-    conversation = [{"role": r["role"], "content": r["content"]} for r in history_rows]
+    if conversation_id is None:
+        conversation_id = db.create_conversation(user_id)
+    elif _owned_conversation_or_404(conversation_id) is None:
+        return jsonify({"error": "Gesprek niet gevonden."}), 404
 
-    db.save_message(user_id, "user", user_message)
+    history_rows = db.get_messages(conversation_id, limit=40)
+    is_first_message = len(history_rows) == 0
+    conversation_history = [
+        {"role": r["role"], "content": r["content"]} for r in history_rows
+    ]
+
+    db.save_message(user_id, conversation_id, "user", user_message)
 
     try:
-        reply, action = assistant.chat_turn(conversation, user_message, _execute_tool)
+        reply, action = assistant.chat_turn(
+            conversation_history, user_message, _execute_tool
+        )
     except assistant.AssistantError as exc:
         reply = str(exc)
         action = None
 
-    db.save_message(user_id, "assistant", reply, attachment=action)
+    db.save_message(user_id, conversation_id, "assistant", reply, attachment=action)
+    db.touch_conversation(conversation_id)
+    if is_first_message:
+        title = user_message[:60] + ("…" if len(user_message) > 60 else "")
+        db.rename_conversation(conversation_id, title)
 
-    return jsonify({"reply": reply, "action": action})
+    return jsonify(
+        {"reply": reply, "action": action, "conversation_id": conversation_id}
+    )
 
 
 @app.route("/api/train", methods=["POST"])

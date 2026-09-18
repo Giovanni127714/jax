@@ -8,16 +8,24 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ asset_version('css/style.css') }}" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="topbar-inner">
-      <div class="brand">
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
         <span class="brand-icon">◆</span>
-        <div>
-          <div class="brand-name">JAX MLP Assistent</div>
-          <div class="brand-sub">Praat vrijuit, of laat me een model trainen en testen</div>
-        </div>
+        <div class="brand-name">JAX MLP Assistent</div>
       </div>
-      <div class="topbar-right">
+
+      <button type="button" class="new-chat-btn" id="new-chat-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        Nieuw gesprek
+      </button>
+
+      <div class="sidebar-section-label">Gesprekken</div>
+      <nav class="conversation-list" id="conversation-list"></nav>
+
+      <div class="sidebar-footer">
         <div class="status-pill" id="status-pill" data-status="idle">
           <span class="status-dot"></span>
           <span id="status-text">Inactief</span>
@@ -27,32 +35,45 @@
           <a href="{{ url_for('logout') }}" class="logout-link">Uitloggen</a>
         </div>
       </div>
-    </div>
-  </header>
+    </aside>
 
-  <main class="chat-wrap">
-    <div class="chat-log" id="chat-log"></div>
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
 
-    <div class="composer-area">
-      <div class="chips" id="chips"></div>
-      <form id="composer-form" class="composer">
-        <svg class="composer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-        </svg>
-        <textarea
-          id="composer-input"
-          rows="1"
-          placeholder="Typ een bericht…"
-        ></textarea>
-        <button type="submit" id="send-btn" class="send-btn" aria-label="Verstuur">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 19V5" />
-            <path d="M5 12l7-7 7 7" />
+    <main class="main-panel">
+      <header class="main-topbar">
+        <button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="Menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-      </form>
-    </div>
-  </main>
+        <div class="main-topbar-title" id="conversation-title">Nieuw gesprek</div>
+      </header>
+
+      <div class="chat-wrap">
+        <div class="chat-log" id="chat-log"></div>
+
+        <div class="composer-area">
+          <div class="chips" id="chips"></div>
+          <form id="composer-form" class="composer">
+            <svg class="composer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <textarea
+              id="composer-input"
+              rows="1"
+              placeholder="Typ een bericht…"
+            ></textarea>
+            <button type="submit" id="send-btn" class="send-btn" aria-label="Verstuur">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 19V5" />
+                <path d="M5 12l7-7 7 7" />
+              </svg>
+            </button>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
 
   <script src="{{ url_for('static', filename='js/app.js') }}?v={{ asset_version('js/app.js') }}"></script>
 </body>

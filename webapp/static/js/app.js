@@ -6,9 +6,129 @@
   const composerInput = document.getElementById("composer-input");
   const sendBtn = document.getElementById("send-btn");
   const chipsEl = document.getElementById("chips");
+  const conversationListEl = document.getElementById("conversation-list");
+  const conversationTitleEl = document.getElementById("conversation-title");
+  const newChatBtn = document.getElementById("new-chat-btn");
+  const sidebar = document.getElementById("sidebar");
+  const sidebarToggle = document.getElementById("sidebar-toggle");
+  const sidebarBackdrop = document.getElementById("sidebar-backdrop");
 
   let chartCounter = 0;
   let isBusy = false;
+  let currentConversationId = null;
+  let conversationsCache = [];
+
+  // ---------------------------------------------------------------------
+  // Sidebar (mobile overlay toggle + conversation list)
+  // ---------------------------------------------------------------------
+  function openSidebar() {
+    sidebar.classList.add("open");
+    sidebarBackdrop.classList.add("open");
+  }
+  function closeSidebar() {
+    sidebar.classList.remove("open");
+    sidebarBackdrop.classList.remove("open");
+  }
+  sidebarToggle.addEventListener("click", () => {
+    sidebar.classList.contains("open") ? closeSidebar() : openSidebar();
+  });
+  sidebarBackdrop.addEventListener("click", closeSidebar);
+
+  async function refreshConversationList() {
+    const res = await fetch("/api/conversations");
+    const data = await res.json();
+    conversationsCache = data.conversations || [];
+    renderConversationList();
+  }
+
+  function renderConversationList() {
+    conversationListEl.innerHTML = "";
+    if (conversationsCache.length === 0) {
+      conversationListEl.innerHTML = '<div class="conversation-empty">Nog geen gesprekken</div>';
+      return;
+    }
+    conversationsCache.forEach((conv) => {
+      const item = document.createElement("div");
+      item.className = "conversation-item" + (conv.id === currentConversationId ? " active" : "");
+      item.innerHTML = `
+        <span class="conversation-item-title">${escapeHtml(conv.title)}</span>
+        <button type="button" class="conversation-delete" aria-label="Verwijder gesprek">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6" />
+          </svg>
+        </button>`;
+      item.addEventListener("click", (event) => {
+        if (event.target.closest(".conversation-delete")) return;
+        if (isBusy) return;
+        loadConversation(conv.id);
+        closeSidebar();
+      });
+      item.querySelector(".conversation-delete").addEventListener("click", async (event) => {
+        event.stopPropagation();
+        await fetch(`/api/conversations/${conv.id}`, { method: "DELETE" });
+        const wasActive = conv.id === currentConversationId;
+        await refreshConversationList();
+        if (wasActive) {
+          if (conversationsCache.length > 0) loadConversation(conversationsCache[0].id);
+          else startNewConversation();
+        }
+      });
+      conversationListEl.appendChild(item);
+    });
+  }
+
+  function setActiveConversationTitle(title) {
+    conversationTitleEl.textContent = title || "Nieuw gesprek";
+  }
+
+  async function loadConversation(conversationId) {
+    currentConversationId = conversationId;
+    renderConversationList();
+    const conv = conversationsCache.find((c) => c.id === conversationId);
+    setActiveConversationTitle(conv ? conv.title : "Gesprek");
+
+    chatLog.innerHTML = "";
+    const res = await fetch(`/api/conversations/${conversationId}/messages`);
+    const data = await res.json();
+    const messages = data.messages || [];
+
+    if (messages.length === 0) {
+      showWelcome();
+      return;
+    }
+
+    messages.forEach((msg) => {
+      if (msg.role === "user") {
+        addUserMessage(msg.content);
+        return;
+      }
+      let html = formatReply(msg.content);
+      const attachment = msg.attachment;
+      if (attachment) {
+        if (attachment.type === "predict") html += renderPredictCard(attachment.result);
+        else if (attachment.type === "model_summary") html += renderModelSummaryCard(attachment.result);
+        else if (attachment.type === "start_training") {
+          html += `<div class="rich-card"><p class="sub-value">🧠 Training gestart (${attachment.num_steps} stappen) in een eerdere sessie.</p></div>`;
+        }
+      }
+      addAssistantMessage(html);
+    });
+    setChips(DEFAULT_CHIPS);
+  }
+
+  function startNewConversation() {
+    currentConversationId = null;
+    setActiveConversationTitle("Nieuw gesprek");
+    chatLog.innerHTML = "";
+    renderConversationList();
+    showWelcome();
+    closeSidebar();
+  }
+
+  newChatBtn.addEventListener("click", () => {
+    if (isBusy) return;
+    startNewConversation();
+  });
 
   // ---------------------------------------------------------------------
   // Theme-aware colors (read live so charts match light/dark mode)
@@ -370,7 +490,7 @@
       res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: text, conversation_id: currentConversationId }),
       });
     } catch (err) {
       showError(bubble, `Kon geen verbinding maken met de server: ${err}`);
@@ -385,6 +505,14 @@
       isBusy = false;
       sendBtn.disabled = false;
       return;
+    }
+
+    const isNewConversation = currentConversationId === null;
+    currentConversationId = data.conversation_id;
+    await refreshConversationList();
+    if (isNewConversation) {
+      const conv = conversationsCache.find((c) => c.id === currentConversationId);
+      setActiveConversationTitle(conv ? conv.title : text.slice(0, 60));
     }
 
     let extraHtml = "";
@@ -441,41 +569,21 @@
   });
 
   // ---------------------------------------------------------------------
-  // Init: load persisted history, or show the welcome message
+  // Init: load conversation list, open the most recent one (or a blank
+  // welcome state if the user has none yet)
   // ---------------------------------------------------------------------
   (async () => {
     try {
-      const [historyRes, statusRes] = await Promise.all([
-        fetch("/api/history"),
-        fetch("/api/train/status"),
-      ]);
-      const historyData = await historyRes.json();
+      const statusRes = await fetch("/api/train/status");
       const statusData = await statusRes.json();
       setStatus(statusData.status);
 
-      const messages = historyData.messages || [];
-      if (messages.length === 0) {
-        showWelcome();
-        return;
+      await refreshConversationList();
+      if (conversationsCache.length > 0) {
+        await loadConversation(conversationsCache[0].id);
+      } else {
+        startNewConversation();
       }
-
-      messages.forEach((msg) => {
-        if (msg.role === "user") {
-          addUserMessage(msg.content);
-          return;
-        }
-        let html = formatReply(msg.content);
-        const attachment = msg.attachment;
-        if (attachment) {
-          if (attachment.type === "predict") html += renderPredictCard(attachment.result);
-          else if (attachment.type === "model_summary") html += renderModelSummaryCard(attachment.result);
-          else if (attachment.type === "start_training") {
-            html += `<div class="rich-card"><p class="sub-value">🧠 Training gestart (${attachment.num_steps} stappen) in een eerdere sessie.</p></div>`;
-          }
-        }
-        addAssistantMessage(html);
-      });
-      setChips(DEFAULT_CHIPS);
     } catch (err) {
       showWelcome();
     }
