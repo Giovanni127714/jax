@@ -14,6 +14,13 @@
   let isBusy = false;
 
   // ---------------------------------------------------------------------
+  // Theme-aware colors (read live so charts match light/dark mode)
+  // ---------------------------------------------------------------------
+  function cssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  // ---------------------------------------------------------------------
   // Status pill
   // ---------------------------------------------------------------------
   const STATUS_LABELS = { idle: "Inactief", training: "Bezig met trainen…", done: "Klaar", error: "Fout" };
@@ -51,9 +58,18 @@
     return row.querySelector(".bubble");
   }
 
+  function addTypingIndicator() {
+    return addAssistantMessage(
+      '<div class="typing-dots"><span></span><span></span><span></span></div>'
+    );
+  }
+
   function addErrorMessage(text) {
-    const bubble = addAssistantMessage(`<p>${escapeHtml(text)}</p>`);
-    bubble.classList.add("error-bubble");
+    addAssistantMessage(`<p class="error-text">${escapeHtml(text)}</p>`);
+  }
+
+  function showError(bubble, text) {
+    bubble.innerHTML = `<p class="error-text">${escapeHtml(text)}</p>`;
   }
 
   function escapeHtml(text) {
@@ -107,7 +123,7 @@
   }
 
   // ---------------------------------------------------------------------
-  // Chart drawing (plain canvas, no dependencies)
+  // Chart drawing (plain canvas, no dependencies, theme-aware colors)
   // ---------------------------------------------------------------------
   function drawLineChart(canvas, series, opts) {
     const ctx = canvas.getContext("2d");
@@ -119,9 +135,12 @@
     const plotW = w - padding.left - padding.right;
     const plotH = h - padding.top - padding.bottom;
 
+    const gridColor = cssVar("--border");
+    const mutedColor = cssVar("--text-muted");
+
     const allValues = series.flatMap((s) => s.data).filter((v) => v !== null && v !== undefined);
     if (allValues.length === 0) {
-      ctx.fillStyle = "#9297ab";
+      ctx.fillStyle = mutedColor;
       ctx.font = "12px sans-serif";
       ctx.fillText("Nog geen data", padding.left, h / 2);
       return;
@@ -141,8 +160,8 @@
     const xForIndex = (i) => padding.left + (maxLen <= 1 ? 0 : (i / (maxLen - 1)) * plotW);
     const yForValue = (v) => padding.top + plotH - ((v - minY) / (maxY - minY)) * plotH;
 
-    ctx.strokeStyle = "rgba(150,150,170,0.2)";
-    ctx.fillStyle = "#9297ab";
+    ctx.strokeStyle = gridColor;
+    ctx.fillStyle = mutedColor;
     ctx.font = "9px sans-serif";
     const gridLines = 3;
     for (let i = 0; i <= gridLines; i++) {
@@ -156,21 +175,34 @@
     }
 
     series.forEach((s) => {
-      if (s.data.length === 0) return;
-      ctx.strokeStyle = s.color;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      let started = false;
+      const points = [];
       s.data.forEach((v, i) => {
         if (v === null || v === undefined) return;
-        const x = xForIndex(i);
-        const y = yForValue(v);
-        if (!started) {
-          ctx.moveTo(x, y);
-          started = true;
-        } else {
-          ctx.lineTo(x, y);
-        }
+        points.push([xForIndex(i), yForValue(v)]);
+      });
+      if (points.length === 0) return;
+
+      if (s.fill) {
+        const gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + plotH);
+        gradient.addColorStop(0, `${s.color}33`);
+        gradient.addColorStop(1, `${s.color}00`);
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.moveTo(points[0][0], padding.top + plotH);
+        points.forEach(([x, y]) => ctx.lineTo(x, y));
+        ctx.lineTo(points[points.length - 1][0], padding.top + plotH);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      ctx.strokeStyle = s.color;
+      ctx.lineWidth = 2;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      points.forEach(([x, y], idx) => {
+        if (idx === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
       });
       ctx.stroke();
     });
@@ -263,21 +295,22 @@
 
     chartCounter += 1;
     const lossChartId = `chart-loss-${chartCounter}`;
-    const metricChartId = `chart-metric-${chartCounter}`;
     const bubble = addAssistantMessage(`
       <p>🧠 Ik start het trainen van een <strong>${taskLabel}</strong>…</p>
       ${overrideNote}
-      <div class="progress-row">
-        <div class="progress-track"><div class="progress-fill" id="fill-${chartCounter}"></div></div>
-        <span class="progress-label" id="label-${chartCounter}">0 / ${payload.num_steps}</span>
+      <div class="rich-card">
+        <div class="progress-row">
+          <div class="progress-track"><div class="progress-fill" id="fill-${chartCounter}"></div></div>
+          <span class="progress-label" id="label-${chartCounter}">0 / ${payload.num_steps}</span>
+        </div>
+        <canvas class="chat-chart" id="${lossChartId}" width="600" height="200"></canvas>
+        <div class="legend">${renderLegendHtml([
+          { label: "Train loss", color: cssVar("--accent") },
+          { label: "Val loss", color: cssVar("--danger") },
+        ])}</div>
+        <div id="metric-wrap-${chartCounter}"></div>
+        <div class="log-console" id="log-${chartCounter}"></div>
       </div>
-      <canvas class="chat-chart" id="${lossChartId}" width="600" height="200"></canvas>
-      <div class="legend">${renderLegendHtml([
-        { label: "Train loss", color: "#4f46e5" },
-        { label: "Val loss", color: "#dc2626" },
-      ])}</div>
-      <div id="metric-wrap-${chartCounter}"></div>
-      <div class="log-console" id="log-${chartCounter}"></div>
     `);
 
     let res;
@@ -288,14 +321,12 @@
         body: JSON.stringify(payload),
       });
     } catch (err) {
-      bubble.classList.add("error-bubble");
-      bubble.innerHTML = `<p>Kon geen verbinding maken met de server: ${escapeHtml(String(err))}</p>`;
+      showError(bubble, `Kon geen verbinding maken met de server: ${err}`);
       return;
     }
     const body = await res.json();
     if (!res.ok) {
-      bubble.classList.add("error-bubble");
-      bubble.innerHTML = `<p>${escapeHtml(body.error || "Onbekende fout bij starten van training.")}</p>`;
+      showError(bubble, body.error || "Onbekende fout bij starten van training.");
       return;
     }
 
@@ -323,8 +354,8 @@
           drawLineChart(
             lossCanvas,
             [
-              { label: "Train loss", color: "#4f46e5", data: history.loss },
-              { label: "Val loss", color: "#dc2626", data: history.val_loss },
+              { label: "Train loss", color: cssVar("--accent"), data: history.loss, fill: true },
+              { label: "Val loss", color: cssVar("--danger"), data: history.val_loss },
             ],
             { formatY: (v) => v.toFixed(2) }
           );
@@ -335,17 +366,17 @@
         if (hasMetric && metricWrap && !metricWrap.dataset.built) {
           metricWrap.dataset.built = "1";
           metricWrap.innerHTML = `
-            <div class="legend" style="margin-top:10px">${renderLegendHtml([{ label: "Val accuracy", color: "#16a34a" }])}</div>
+            <div class="legend" style="margin-top:10px">${renderLegendHtml([{ label: "Val accuracy", color: cssVar("--success") }])}</div>
             <canvas class="chat-chart" id="chart-metric-${counter}" width="600" height="120"></canvas>`;
         }
         if (hasMetric) {
           const metricCanvas = document.getElementById(`chart-metric-${counter}`);
           if (metricCanvas) {
-            drawLineChart(metricCanvas, [{ label: "Val accuracy", color: "#16a34a", data: history.val_metric }], {
-              minY: 0,
-              maxY: 1,
-              formatY: (v) => v.toFixed(2),
-            });
+            drawLineChart(
+              metricCanvas,
+              [{ label: "Val accuracy", color: cssVar("--success"), data: history.val_metric, fill: true }],
+              { minY: 0, maxY: 1, formatY: (v) => v.toFixed(2) }
+            );
           }
         }
 
@@ -372,6 +403,7 @@
 
         if (data.status === "error") {
           const note = document.createElement("p");
+          note.className = "error-text";
           note.textContent = `❌ Training mislukt: ${data.error || "onbekende fout"}`;
           bubble.appendChild(note);
         } else if (data.status === "done") {
@@ -413,7 +445,7 @@
       }
     }
 
-    const bubble = addAssistantMessage(`<p>🔮 Voorspellen op basis van <code>[${features.join(", ")}]</code>…</p>`);
+    const bubble = addTypingIndicator();
 
     let res;
     try {
@@ -423,14 +455,12 @@
         body: JSON.stringify({ features }),
       });
     } catch (err) {
-      bubble.classList.add("error-bubble");
-      bubble.innerHTML = `<p>Kon geen verbinding maken: ${escapeHtml(String(err))}</p>`;
+      showError(bubble, `Kon geen verbinding maken: ${err}`);
       return;
     }
     const data = await res.json();
     if (!res.ok) {
-      bubble.classList.add("error-bubble");
-      bubble.innerHTML = `<p>${escapeHtml(data.error || "Voorspellen mislukt.")}</p>`;
+      showError(bubble, data.error || "Voorspellen mislukt.");
       return;
     }
 
@@ -448,15 +478,19 @@
         .join("");
       bubble.innerHTML = `
         <p>Voorspelling voor <code>[${features.join(", ")}]</code>:</p>
-        <div class="big-value">Klasse ${data.predicted_class}</div>
-        <div class="sub-value">Kans: ${(data.probabilities[data.predicted_class] * 100).toFixed(1)}%</div>
-        ${rows}`;
+        <div class="rich-card">
+          <div class="big-value">Klasse ${data.predicted_class}</div>
+          <div class="sub-value">Kans: ${(data.probabilities[data.predicted_class] * 100).toFixed(1)}%</div>
+          ${rows}
+        </div>`;
     } else {
       const formulaValue = 2 * (features[0] || 0) + 3 * (features[1] || 0);
       bubble.innerHTML = `
         <p>Voorspelling voor <code>[${features.join(", ")}]</code>:</p>
-        <div class="big-value">${data.prediction.toFixed(3)}</div>
-        <div class="sub-value">Formule 2·x1 + 3·x2 geeft (ter vergelijking): ${formulaValue.toFixed(3)}</div>`;
+        <div class="rich-card">
+          <div class="big-value">${data.prediction.toFixed(3)}</div>
+          <div class="sub-value">Formule 2·x1 + 3·x2 geeft (ter vergelijking): ${formulaValue.toFixed(3)}</div>
+        </div>`;
     }
     scrollToBottom();
   }
@@ -465,12 +499,11 @@
   // Command: model info
   // ---------------------------------------------------------------------
   async function handleModelInfo() {
-    const bubble = addAssistantMessage("<p>📊 Modelinfo ophalen…</p>");
+    const bubble = addTypingIndicator();
     const res = await fetch("/api/model/summary");
     const data = await res.json();
     if (!res.ok) {
-      bubble.classList.add("error-bubble");
-      bubble.innerHTML = `<p>${escapeHtml(data.error || "Geen model beschikbaar.")}</p>`;
+      showError(bubble, data.error || "Geen model beschikbaar.");
       return;
     }
     const rows = data.layers
@@ -478,11 +511,13 @@
       .join("");
     bubble.innerHTML = `
       <p>Huidige architectuur:</p>
-      <table class="data-table">
-        <thead><tr><th>Laag</th><th>Input</th><th>Output</th><th>Parameters</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-      <p class="sub-value">Totaal aantal parameters: ${data.total_params.toLocaleString("nl-NL")}</p>`;
+      <div class="rich-card">
+        <table class="data-table">
+          <thead><tr><th>Laag</th><th>Input</th><th>Output</th><th>Parameters</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <p class="sub-value" style="margin-top:10px">Totaal aantal parameters: ${data.total_params.toLocaleString("nl-NL")}</p>
+      </div>`;
     scrollToBottom();
   }
 
@@ -490,16 +525,17 @@
   // Command: status
   // ---------------------------------------------------------------------
   async function handleStatus() {
+    const bubble = addTypingIndicator();
     const res = await fetch("/api/train/status");
     const data = await res.json();
     if (data.status === "idle") {
-      addAssistantMessage("<p>Er is nog geen training gestart. Zeg 'train een regressiemodel' om te beginnen.</p>");
+      bubble.innerHTML = "<p>Er is nog geen training gestart. Zeg 'train een regressiemodel' om te beginnen.</p>";
     } else if (data.status === "training") {
-      addAssistantMessage(`<p>⏳ Bezig: stap ${data.current_step} van ${data.total_steps}.</p>`);
+      bubble.innerHTML = `<p>⏳ Bezig: stap ${data.current_step} van ${data.total_steps}.</p>`;
     } else if (data.status === "done") {
-      addAssistantMessage("<p>✅ Er staat een getraind model klaar. Je kan nu een voorspelling vragen.</p>");
+      bubble.innerHTML = "<p>✅ Er staat een getraind model klaar. Je kan nu een voorspelling vragen.</p>";
     } else {
-      addAssistantMessage(`<p>❌ Laatste training eindigde met een fout: ${escapeHtml(data.error || "onbekend")}</p>`);
+      showError(bubble, `Laatste training eindigde met een fout: ${data.error || "onbekend"}`);
     }
   }
 
