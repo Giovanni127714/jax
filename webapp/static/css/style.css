@@ -683,7 +683,8 @@ canvas.chat-chart { width: 100%; height: auto; display: block; }
   background: linear-gradient(155deg, var(--accent), var(--accent-hover));
   box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 30%, transparent);
   font-size: 0.95rem;
-  padding: 13px 16px;
+  padding: 15px 16px;
+  margin-top: 6px;
 }
 .train-submit-btn svg { width: 17px; height: 17px; }
 .train-submit-btn:hover { filter: brightness(1.06); background: linear-gradient(155deg, var(--accent), var(--accent-hover)); }
@@ -715,8 +716,8 @@ canvas.chat-chart { width: 100%; height: auto; display: block; }
 
 .modal {
   width: 100%;
-  max-width: 500px;
-  max-height: min(700px, 90vh);
+  max-width: 520px;
+  max-height: min(760px, 92vh);
   display: flex;
   flex-direction: column;
   background: var(--surface);
@@ -734,8 +735,8 @@ canvas.chat-chart { width: 100%; height: auto; display: block; }
 .modal-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 20px 20px 18px;
+  gap: 14px;
+  padding: 26px 26px 22px;
   background: linear-gradient(160deg, var(--accent-soft), transparent 70%);
   flex-shrink: 0;
 }
@@ -775,29 +776,29 @@ canvas.chat-chart { width: 100%; height: auto; display: block; }
 .modal-close:hover { background: var(--accent-soft); color: var(--accent); }
 
 .modal-body {
-  padding: 4px 20px 20px;
+  padding: 8px 26px 26px;
   overflow-y: auto;
   background: radial-gradient(480px 160px at 50% 0%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 75%);
 }
 
 .train-task-toggle {
   display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 26px;
 }
 .train-task-btn {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 8px;
   border: 1.5px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
   color: var(--text-muted);
   font-weight: 700;
   font-size: 0.86rem;
-  padding: 12px;
+  padding: 15px 12px;
   cursor: pointer;
   transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease, transform 0.1s ease;
 }
@@ -816,15 +817,15 @@ canvas.chat-chart { width: 100%; height: auto; display: block; }
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--surface-2);
-  padding: 14px 16px 16px;
-  margin: 0 0 12px;
+  padding: 20px 22px 22px;
+  margin: 0 0 18px;
 }
 .train-fieldset legend {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   padding: 0;
-  margin-bottom: 12px;
+  margin-bottom: 18px;
   font-size: 0.74rem;
   font-weight: 700;
   color: var(--text-muted);
@@ -843,15 +844,16 @@ canvas.chat-chart { width: 100%; height: auto; display: block; }
   flex-shrink: 0;
 }
 .legend-icon svg { width: 13px; height: 13px; }
-.train-field-row { display: flex; gap: 12px; margin-bottom: 10px; }
+.train-field-row { display: flex; gap: 18px; margin-bottom: 16px; }
 .train-field-row:last-child { margin-bottom: 0; }
-.train-field-row .field { flex: 1; margin: 0; }
+.train-field-row .field { flex: 1; margin: 0; gap: 8px; }
 .train-field-row .field label { color: var(--text-muted); }
 .train-field-row .field input {
   width: 100%;
   background: var(--surface);
   font-variant-numeric: tabular-nums;
   border-color: var(--border);
+  padding: 12px 14px;
 }
 .train-field-row .field input:focus { box-shadow: 0 0 0 3px var(--accent-soft); }
 .train-field-row .field input::-webkit-outer-spin-button,
