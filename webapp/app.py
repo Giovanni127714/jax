@@ -5,7 +5,6 @@ Usage:
 Then open http://127.0.0.1:5000 in a browser.
 """
 
-import os
 import sys
 import threading
 import webbrowser
@@ -26,13 +25,6 @@ from src.training.trainer import Trainer
 from src.utils.config import Config
 
 app = Flask(__name__)
-
-# On Vercel, a background thread is not guaranteed to keep running once the
-# HTTP response is sent (each request is a serverless invocation), so a
-# training job started there must run synchronously within the request
-# instead of in a daemon thread. Locally, the daemon thread lets the UI
-# poll for live progress while training continues in the background.
-ON_VERCEL = os.environ.get("VERCEL") == "1"
 
 
 class TrainingJob:
@@ -185,18 +177,8 @@ def start_training():
         return jsonify({"error": "num_samples moet >= batch_size zijn."}), 400
 
     job.reset_for_run(task, config)
-
-    if ON_VERCEL:
-        # Block the request until training finishes; the UI will see the
-        # final "done" state on its first status poll instead of live
-        # step-by-step updates. Keep num_steps modest on Vercel so this
-        # stays within the function's time limit.
-        _run_training(task, config)
-    else:
-        thread = threading.Thread(
-            target=_run_training, args=(task, config), daemon=True
-        )
-        thread.start()
+    thread = threading.Thread(target=_run_training, args=(task, config), daemon=True)
+    thread.start()
 
     return jsonify({"status": "started"})
 
