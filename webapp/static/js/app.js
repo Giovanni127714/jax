@@ -86,11 +86,12 @@
 
   function setChips(items) {
     chipsEl.innerHTML = "";
-    items.forEach((label) => {
+    items.forEach((item) => {
+      const { icon, label } = typeof item === "string" ? { icon: "💬", label: item } : item;
       const chip = document.createElement("button");
       chip.type = "button";
       chip.className = "chip";
-      chip.textContent = label;
+      chip.innerHTML = `<span class="chip-icon">${icon}</span>${escapeHtml(label)}`;
       chip.addEventListener("click", () => {
         if (isBusy) return;
         addUserMessage(label);
@@ -101,10 +102,10 @@
   }
 
   const DEFAULT_CHIPS = [
-    "Train een regressiemodel",
-    "Train een classificatiemodel",
-    "Wat kan je allemaal?",
-    "Leg uit hoe dit project werkt",
+    { icon: "📈", label: "Train een regressiemodel" },
+    { icon: "🧮", label: "Train een classificatiemodel" },
+    { icon: "💡", label: "Wat kan je allemaal?" },
+    { icon: "📖", label: "Leg uit hoe dit project werkt" },
   ];
 
   function showWelcome() {
