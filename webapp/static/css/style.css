@@ -676,3 +676,114 @@ canvas.chat-chart { width: 100%; height: auto; display: block; }
 .auth-switch { text-align: center; font-size: 0.83rem; color: var(--text-muted); margin: 20px 0 0; }
 .auth-switch a { color: var(--accent); text-decoration: none; font-weight: 600; }
 .auth-switch a:hover { text-decoration: underline; }
+
+/* ---------------------------------------------------------------------
+   Train modal - explicit form-based way to start training, independent
+   of the chat/Claude path (works even without API credits).
+--------------------------------------------------------------------- */
+
+.train-open-btn { margin-bottom: 16px; }
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 18, 14, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 50;
+}
+
+.modal {
+  width: 100%;
+  max-width: 480px;
+  max-height: min(680px, 90vh);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.modal-header h2 { margin: 0; font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; }
+
+.modal-close {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.modal-close svg { width: 17px; height: 17px; }
+.modal-close:hover { background: var(--accent-soft); color: var(--accent); }
+
+.modal-body { padding: 20px; overflow-y: auto; }
+
+.train-task-toggle {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+.train-task-btn {
+  flex: 1;
+  border: none;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.86rem;
+  padding: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.train-task-btn.active { background: var(--accent); color: white; }
+
+.train-fieldset {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px 14px;
+  margin: 0 0 14px;
+}
+.train-fieldset legend {
+  padding: 0 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.train-field-row { display: flex; gap: 12px; margin-bottom: 10px; }
+.train-field-row:last-child { margin-bottom: 0; }
+.train-field-row .field { flex: 1; margin: 0; }
+.train-field-row .field input { width: 100%; }
+
+.train-error {
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--border));
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 0.83rem;
+  margin: 0 0 14px;
+  color: var(--danger);
+}
+
+.train-progress-view .progress-row,
+.train-progress-view canvas,
+.train-progress-view .legend,
+.train-progress-view .log-console { margin-top: 0; }

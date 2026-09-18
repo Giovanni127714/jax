@@ -29,6 +29,10 @@
   const emptyHero = document.getElementById("empty-hero");
   const emptyGreeting = document.getElementById("empty-greeting");
   const emptyComposerMount = document.getElementById("empty-composer-mount");
+  const trainOpenBtn = document.getElementById("train-open-btn");
+  const trainModalBackdrop = document.getElementById("train-modal-backdrop");
+  const trainModalClose = document.getElementById("train-modal-close");
+  const trainModalBody = document.getElementById("train-modal-body");
 
   let chartCounter = 0;
   let isBusy = false;
@@ -180,6 +184,188 @@
   newChatBtn.addEventListener("click", () => {
     if (isBusy) return;
     startNewConversation();
+  });
+
+  // ---------------------------------------------------------------------
+  // Train modal: an explicit form for starting training, independent of
+  // the chat/Claude path. Calls /api/train directly, so it works even
+  // without an ANTHROPIC_API_KEY configured.
+  // ---------------------------------------------------------------------
+  let trainModalTask = "regression";
+
+  function trainFormHtml(task) {
+    const classificationFields =
+      task === "classification"
+        ? `
+      <fieldset class="train-fieldset">
+        <legend>Classificatie</legend>
+        <div class="train-field-row">
+          <div class="field">
+            <label for="tf-num_classes">Aantal klassen</label>
+            <input type="number" id="tf-num_classes" min="2" max="50" step="1" value="4" />
+          </div>
+        </div>
+      </fieldset>`
+        : "";
+
+    return `
+      <div class="train-task-toggle">
+        <button type="button" class="train-task-btn ${task === "regression" ? "active" : ""}" data-task="regression">Regressie</button>
+        <button type="button" class="train-task-btn ${task === "classification" ? "active" : ""}" data-task="classification">Classificatie</button>
+      </div>
+      <form id="train-form">
+        <p class="train-error" id="train-form-error" hidden></p>
+        ${classificationFields}
+        <fieldset class="train-fieldset">
+          <legend>Architectuur</legend>
+          <div class="train-field-row">
+            <div class="field">
+              <label for="tf-input_dim">Input-dimensie</label>
+              <input type="number" id="tf-input_dim" min="1" max="256" step="1" value="4" />
+            </div>
+            <div class="field">
+              <label for="tf-hidden_dim">Hidden-dimensie</label>
+              <input type="number" id="tf-hidden_dim" min="1" max="2048" step="1" value="64" />
+            </div>
+          </div>
+          <div class="train-field-row">
+            <div class="field">
+              <label for="tf-num_layers">Aantal lagen</label>
+              <input type="number" id="tf-num_layers" min="1" max="12" step="1" value="2" />
+            </div>
+            <div class="field">
+              <label for="tf-dropout">Dropout</label>
+              <input type="number" id="tf-dropout" min="0" max="0.9" step="any" value="0.1" />
+            </div>
+          </div>
+        </fieldset>
+        <fieldset class="train-fieldset">
+          <legend>Training</legend>
+          <div class="train-field-row">
+            <div class="field">
+              <label for="tf-num_steps">Aantal stappen</label>
+              <input type="number" id="tf-num_steps" min="10" max="20000" step="1" value="300" />
+            </div>
+            <div class="field">
+              <label for="tf-batch_size">Batchgrootte</label>
+              <input type="number" id="tf-batch_size" min="1" max="1024" step="1" value="32" />
+            </div>
+          </div>
+          <div class="train-field-row">
+            <div class="field">
+              <label for="tf-learning_rate">Learning rate</label>
+              <input type="number" id="tf-learning_rate" min="0.00001" max="1" step="any" value="0.001" />
+            </div>
+            <div class="field">
+              <label for="tf-num_samples">Aantal samples</label>
+              <input type="number" id="tf-num_samples" min="16" max="200000" step="1" value="1000" />
+            </div>
+          </div>
+        </fieldset>
+        <button type="submit" class="btn-primary" id="train-submit-btn" style="width:100%">Start training</button>
+      </form>
+    `;
+  }
+
+  function renderTrainForm() {
+    trainModalBody.className = "";
+    trainModalBody.innerHTML = trainFormHtml(trainModalTask);
+
+    trainModalBody.querySelectorAll(".train-task-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        trainModalTask = btn.dataset.task;
+        renderTrainForm();
+      });
+    });
+
+    document.getElementById("train-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const errorEl = document.getElementById("train-form-error");
+      errorEl.hidden = true;
+
+      const val = (id) => document.getElementById(id).value;
+      const payload = {
+        task: trainModalTask,
+        input_dim: Number(val("tf-input_dim")),
+        hidden_dim: Number(val("tf-hidden_dim")),
+        num_layers: Number(val("tf-num_layers")),
+        dropout: Number(val("tf-dropout")),
+        num_steps: Number(val("tf-num_steps")),
+        batch_size: Number(val("tf-batch_size")),
+        learning_rate: Number(val("tf-learning_rate")),
+        num_samples: Number(val("tf-num_samples")),
+      };
+      if (trainModalTask === "classification") {
+        payload.num_classes = Number(val("tf-num_classes"));
+      }
+
+      const submitBtn = document.getElementById("train-submit-btn");
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Bezig…";
+
+      let res;
+      try {
+        res = await fetch("/api/train", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } catch (err) {
+        errorEl.textContent = `Kon geen verbinding maken: ${err}`;
+        errorEl.hidden = false;
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Start training";
+        return;
+      }
+
+      const data = await res.json();
+      if (!res.ok) {
+        errorEl.textContent = data.error || "Er ging iets mis.";
+        errorEl.hidden = false;
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Start training";
+        return;
+      }
+
+      setStatus("training");
+      showTrainProgressInModal(payload.num_steps);
+    });
+  }
+
+  function showTrainProgressInModal(numSteps) {
+    const shell = renderTrainingCardShell(numSteps);
+    trainModalBody.className = "train-progress-view";
+    trainModalBody.innerHTML = shell.html;
+    pollTraining(shell.counter).then(() => {
+      const doneNote = document.createElement("p");
+      doneNote.className = "sub-value";
+      doneNote.style.marginTop = "12px";
+      doneNote.textContent =
+        "✅ Klaar! Ga naar een gesprek om een voorspelling te vragen, of sluit dit venster.";
+      trainModalBody.appendChild(doneNote);
+    });
+  }
+
+  function openTrainModal() {
+    trainModalTask = "regression";
+    renderTrainForm();
+    trainModalBackdrop.hidden = false;
+  }
+
+  function closeTrainModal() {
+    trainModalBackdrop.hidden = true;
+  }
+
+  trainOpenBtn.addEventListener("click", () => {
+    closeSidebar();
+    openTrainModal();
+  });
+  trainModalClose.addEventListener("click", closeTrainModal);
+  trainModalBackdrop.addEventListener("click", (event) => {
+    if (event.target === trainModalBackdrop) closeTrainModal();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !trainModalBackdrop.hidden) closeTrainModal();
   });
 
   // ---------------------------------------------------------------------
