@@ -198,7 +198,7 @@
       task === "classification"
         ? `
       <fieldset class="train-fieldset">
-        <legend>Classificatie</legend>
+        <legend><span class="chip-icon">🧮</span> Classificatie</legend>
         <div class="train-field-row">
           <div class="field">
             <label for="tf-num_classes">Aantal klassen</label>
@@ -210,14 +210,18 @@
 
     return `
       <div class="train-task-toggle">
-        <button type="button" class="train-task-btn ${task === "regression" ? "active" : ""}" data-task="regression">Regressie</button>
-        <button type="button" class="train-task-btn ${task === "classification" ? "active" : ""}" data-task="classification">Classificatie</button>
+        <button type="button" class="train-task-btn ${task === "regression" ? "active" : ""}" data-task="regression">
+          <span class="chip-icon">📈</span> Regressie
+        </button>
+        <button type="button" class="train-task-btn ${task === "classification" ? "active" : ""}" data-task="classification">
+          <span class="chip-icon">🧮</span> Classificatie
+        </button>
       </div>
       <form id="train-form">
         <p class="train-error" id="train-form-error" hidden></p>
         ${classificationFields}
         <fieldset class="train-fieldset">
-          <legend>Architectuur</legend>
+          <legend><span class="chip-icon">🧠</span> Architectuur</legend>
           <div class="train-field-row">
             <div class="field">
               <label for="tf-input_dim">Input-dimensie</label>
@@ -240,7 +244,7 @@
           </div>
         </fieldset>
         <fieldset class="train-fieldset">
-          <legend>Training</legend>
+          <legend><span class="chip-icon">⚙️</span> Training</legend>
           <div class="train-field-row">
             <div class="field">
               <label for="tf-num_steps">Aantal stappen</label>
@@ -262,7 +266,12 @@
             </div>
           </div>
         </fieldset>
-        <button type="submit" class="btn-primary" id="train-submit-btn" style="width:100%">Start training</button>
+        <button type="submit" class="btn-primary train-submit-btn" id="train-submit-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" />
+          </svg>
+          Start training
+        </button>
       </form>
     `;
   }
