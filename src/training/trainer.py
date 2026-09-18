@@ -188,6 +188,7 @@ class Trainer:
         X_val: jnp.ndarray,
         y_val: jnp.ndarray,
         num_epochs: Optional[int] = None,
+        on_log: Optional[Callable[[int, int, float, Dict[str, float]], None]] = None,
     ) -> Dict[str, list]:
         """Runs the full training loop.
 
@@ -199,6 +200,10 @@ class Trainer:
             num_epochs: Number of passes over the training set. If ``None``,
                 trains for ``config.num_steps`` total optimizer steps
                 instead.
+            on_log: Optional callback invoked every ``config.log_every``
+                steps (and on the final step) as
+                ``on_log(step, total_steps, loss, metrics)``. Useful for
+                streaming progress to a UI.
 
         Returns:
             A history dict with ``"loss"``, ``"val_loss"``, and
@@ -253,6 +258,9 @@ class Trainer:
 
                     if self.config.use_wandb:
                         self._log_wandb(step, loss, metrics)
+
+                    if on_log is not None:
+                        on_log(step, total_steps, float(loss), metrics)
 
         self.state = state
         return self.history
