@@ -27,6 +27,25 @@ from src.utils.config import Config
 app = Flask(__name__)
 
 
+@app.context_processor
+def inject_asset_version() -> Dict[str, Any]:
+    """Exposes asset_version() to templates for cache-busting static files.
+
+    Appending ?v=<mtime> to a static URL forces browsers to refetch it as
+    soon as the file changes on disk, instead of serving a stale cached
+    copy after a normal reload.
+    """
+
+    def asset_version(rel_path: str) -> int:
+        full_path = Path(app.static_folder) / rel_path
+        try:
+            return int(full_path.stat().st_mtime)
+        except OSError:
+            return 0
+
+    return {"asset_version": asset_version}
+
+
 class TrainingJob:
     """Thread-safe holder for the state of the single active training run."""
 
