@@ -19,7 +19,8 @@ git clone https://github.com/YOUR_USERNAME/jax-mlp-training.git
 cd jax-mlp-training
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements.txt          # runtime deps (jax, flax, flask, ...)
+pip install -r requirements-dev.txt      # + pytest/black/flake8, for testing/linting
 pip install -e .
 
 # Run the regression example
@@ -50,10 +51,13 @@ suite.
 
 ### Deploying the web UI to Vercel
 
-The repo includes [vercel.json](vercel.json), a scoped-down
-[webapp/requirements.txt](webapp/requirements.txt), and a `.vercelignore` so
+The repo includes [vercel.json](vercel.json) and a `.vercelignore` so
 `vercel deploy` (or a GitHub-connected Vercel project) can pick this up as a
-Python Function. Two real constraints of that setup, by design:
+Python Function. The entrypoint is [api/index.py](api/index.py) — a thin
+shim that re-exports the real Flask app from `webapp/app.py`, since Vercel's
+Python builder only auto-detects entrypoints at a fixed set of conventional
+paths (`api/`, `app/`, `src/`, or the project root) and `webapp/` isn't one
+of them. Two real constraints of that setup, by design:
 
 - **Bundle size.** JAX + Flax pull in `jaxlib`, `scipy`, and `numpy`, which
   together are close to (or over) Vercel's 500 MB standard Function bundle
@@ -191,8 +195,8 @@ training pipeline:
 
 ## Contributing
 
-- Format code: `black src/ examples/ tests/ webapp/ play.py`
-- Lint: `flake8 src/ examples/ tests/ webapp/ play.py`
+- Format code: `black src/ examples/ tests/ webapp/ api/ play.py`
+- Lint: `flake8 src/ examples/ tests/ webapp/ api/ play.py`
 - Add tests for new features
 - Follow Google-style docstrings
 

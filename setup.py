@@ -24,7 +24,7 @@ setup(
         "numpy",
         "matplotlib",
         "wandb",
-        "pyyaml",
+        "flask",
     ],
     extras_require={
         "dev": ["pytest", "black", "flake8"],
