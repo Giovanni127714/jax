@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Registreren &mdash; JAX MLP Assistent</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9670;</text></svg>" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ asset_version('css/style.css') }}" />
+</head>
+<body>
+  <main class="auth-wrap">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <span class="brand-icon">◆</span>
+        <div class="brand-name">JAX MLP Assistent</div>
+      </div>
+      <h1 class="auth-title">Account aanmaken</h1>
+      <p class="auth-sub">Zo blijft je gesprek bewaard en kan je het later teruglezen.</p>
+
+      {% if error %}
+        <p class="error-text auth-error">{{ error }}</p>
+      {% endif %}
+
+      <form method="post" class="auth-form">
+        <div class="field">
+          <label for="username">Gebruikersnaam</label>
+          <input type="text" id="username" name="username" autocomplete="username" minlength="3" maxlength="32" required autofocus />
+        </div>
+        <div class="field">
+          <label for="password">Wachtwoord</label>
+          <input type="password" id="password" name="password" autocomplete="new-password" minlength="8" required />
+        </div>
+        <div class="field">
+          <label for="password_confirm">Herhaal wachtwoord</label>
+          <input type="password" id="password_confirm" name="password_confirm" autocomplete="new-password" minlength="8" required />
+        </div>
+        <button type="submit" class="btn-primary">Account aanmaken</button>
+      </form>
+
+      <p class="auth-switch">Heb je al een account? <a href="{{ url_for('login') }}">Log hier in</a></p>
+    </div>
+  </main>
+</body>
+</html>

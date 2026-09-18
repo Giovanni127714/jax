@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Inloggen &mdash; JAX MLP Assistent</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9670;</text></svg>" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ asset_version('css/style.css') }}" />
+</head>
+<body>
+  <main class="auth-wrap">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <span class="brand-icon">◆</span>
+        <div class="brand-name">JAX MLP Assistent</div>
+      </div>
+      <h1 class="auth-title">Welkom terug</h1>
+      <p class="auth-sub">Log in om je gesprek en getrainde modellen terug te zien.</p>
+
+      {% if error %}
+        <p class="error-text auth-error">{{ error }}</p>
+      {% endif %}
+
+      <form method="post" class="auth-form">
+        <div class="field">
+          <label for="username">Gebruikersnaam</label>
+          <input type="text" id="username" name="username" autocomplete="username" required autofocus />
+        </div>
+        <div class="field">
+          <label for="password">Wachtwoord</label>
+          <input type="password" id="password" name="password" autocomplete="current-password" required />
+        </div>
+        <button type="submit" class="btn-primary">Inloggen</button>
+      </form>
+
+      <p class="auth-switch">Nog geen account? <a href="{{ url_for('register') }}">Registreer hier</a></p>
+    </div>
+  </main>
+</body>
+</html>

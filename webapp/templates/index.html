@@ -14,12 +14,18 @@
         <span class="brand-icon">◆</span>
         <div>
           <div class="brand-name">JAX MLP Assistent</div>
-          <div class="brand-sub">Chat-bediening voor je eigen trainer &mdash; geen taalmodel, een commando-assistent</div>
+          <div class="brand-sub">Praat vrijuit, of laat me een model trainen en testen</div>
         </div>
       </div>
-      <div class="status-pill" id="status-pill" data-status="idle">
-        <span class="status-dot"></span>
-        <span id="status-text">Inactief</span>
+      <div class="topbar-right">
+        <div class="status-pill" id="status-pill" data-status="idle">
+          <span class="status-dot"></span>
+          <span id="status-text">Inactief</span>
+        </div>
+        <div class="user-menu">
+          <span class="user-name">{{ username }}</span>
+          <a href="{{ url_for('logout') }}" class="logout-link">Uitloggen</a>
+        </div>
       </div>
     </div>
   </header>
@@ -33,7 +39,7 @@
         <textarea
           id="composer-input"
           rows="1"
-          placeholder="Typ een bericht, bv. 'train een classificatiemodel' of 'voorspel 1 2 0 0'…"
+          placeholder="Typ wat je wil &mdash; een vraag, een gesprek, of 'train een classificatiemodel'…"
         ></textarea>
         <button type="submit" id="send-btn" class="send-btn" aria-label="Verstuur">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
