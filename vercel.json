@@ -1,0 +1,11 @@
+{
+  "functions": {
+    "webapp/app.py": {
+      "maxDuration": 300,
+      "excludeFiles": "{tests/**,examples/**,configs/**,.venv/**,wandb/**,.pytest_cache/**,.github/**,*.md,*.png,regression_checkpoint/**,.scratch_screens/**}"
+    }
+  },
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/webapp/app.py" }
+  ]
+}

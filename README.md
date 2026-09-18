@@ -48,6 +48,30 @@ There are also two minimal CLI helpers for quick checks without the UI:
 values to see predictions in the terminal, and `test.bat` runs the test
 suite.
 
+### Deploying the web UI to Vercel
+
+The repo includes [vercel.json](vercel.json), a scoped-down
+[webapp/requirements.txt](webapp/requirements.txt), and a `.vercelignore` so
+`vercel deploy` (or a GitHub-connected Vercel project) can pick this up as a
+Python Function. Two real constraints of that setup, by design:
+
+- **Bundle size.** JAX + Flax pull in `jaxlib`, `scipy`, and `numpy`, which
+  together are close to (or over) Vercel's 500 MB standard Function bundle
+  limit. If the deploy fails on size, enable **Fluid Compute** / **Large
+  Functions** (up to 5 GB) in your Vercel project settings — there is no
+  smaller-bundle fallback for this stack.
+- **No background thread.** Locally, training runs in a daemon thread so the
+  UI can poll for live progress. A serverless request has no such
+  guarantee, so on Vercel (detected via the `VERCEL` env var) training runs
+  *synchronously inside the request* instead: the page won't show live
+  step-by-step updates there, only the final result once the request
+  completes. Keep `num_steps` modest so a run finishes within your
+  function's `maxDuration`.
+
+This is a best-effort deployment of a project that's architecturally a
+better fit for a platform built for long-running processes (a VPS, Render,
+Railway, etc.) — treat it as a demo, not a robust production setup.
+
 ## Architecture
 
 ```
