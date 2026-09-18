@@ -55,12 +55,18 @@ def main() -> None:
     )
 
     # Data
-    gen = ClassificationDataGenerator(config, num_classes=config.output_dim, random_seed=config.seed)
+    gen = ClassificationDataGenerator(
+        config, num_classes=config.output_dim, random_seed=config.seed
+    )
     X, y = gen.generate(2000)
     X_train, y_train, X_val, y_val = gen.train_val_split(X, y)
 
     # Model
-    model = MLP(hidden_dim=config.hidden_dim, output_dim=config.output_dim, num_layers=config.num_layers)
+    model = MLP(
+        hidden_dim=config.hidden_dim,
+        output_dim=config.output_dim,
+        num_layers=config.num_layers,
+    )
     model_summary(model, config)
 
     # Training (Trainer logs to W&B internally since config.use_wandb=True)

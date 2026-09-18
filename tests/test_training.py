@@ -58,7 +58,11 @@ def test_trainer_init():
 def test_trainer_create_train_state():
     """Test that create_train_state initializes a usable TrainState."""
     config = Config(hidden_dim=16, output_dim=4, input_dim=8, num_layers=1)
-    model = MLP(hidden_dim=config.hidden_dim, output_dim=config.output_dim, num_layers=config.num_layers)
+    model = MLP(
+        hidden_dim=config.hidden_dim,
+        output_dim=config.output_dim,
+        num_layers=config.num_layers,
+    )
     trainer = Trainer(model, config, loss_fn=cross_entropy_loss, val_metric_fn=accuracy)
 
     key = random.PRNGKey(0)
@@ -70,8 +74,14 @@ def test_trainer_create_train_state():
 
 def test_trainer_train_step_updates_state():
     """A single train_step should change params and return a finite loss."""
-    config = Config(hidden_dim=16, output_dim=1, input_dim=8, num_layers=1, gradient_clip=1.0)
-    model = MLP(hidden_dim=config.hidden_dim, output_dim=config.output_dim, num_layers=config.num_layers)
+    config = Config(
+        hidden_dim=16, output_dim=1, input_dim=8, num_layers=1, gradient_clip=1.0
+    )
+    model = MLP(
+        hidden_dim=config.hidden_dim,
+        output_dim=config.output_dim,
+        num_layers=config.num_layers,
+    )
     trainer = Trainer(model, config, loss_fn=mse_loss)
 
     key = random.PRNGKey(0)
@@ -89,7 +99,11 @@ def test_trainer_train_step_updates_state():
 def test_trainer_evaluate_reports_val_metric():
     """evaluate() should include val_metric when val_metric_fn is provided."""
     config = Config(hidden_dim=16, output_dim=4, input_dim=8, num_layers=1)
-    model = MLP(hidden_dim=config.hidden_dim, output_dim=config.output_dim, num_layers=config.num_layers)
+    model = MLP(
+        hidden_dim=config.hidden_dim,
+        output_dim=config.output_dim,
+        num_layers=config.num_layers,
+    )
     trainer = Trainer(model, config, loss_fn=cross_entropy_loss, val_metric_fn=accuracy)
 
     key = random.PRNGKey(0)

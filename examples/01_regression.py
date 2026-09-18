@@ -36,7 +36,11 @@ def main() -> None:
     X_train, y_train, X_val, y_val = gen.train_val_split(X, y)
 
     # Model
-    model = MLP(hidden_dim=config.hidden_dim, output_dim=config.output_dim, num_layers=config.num_layers)
+    model = MLP(
+        hidden_dim=config.hidden_dim,
+        output_dim=config.output_dim,
+        num_layers=config.num_layers,
+    )
     model_summary(model, config)
 
     # Training
@@ -46,7 +50,11 @@ def main() -> None:
     # Plotting
     plt.figure(figsize=(10, 5))
     plt.plot(history["loss"], label="Train Loss")
-    log_steps = range(config.log_every, config.log_every * len(history["val_loss"]) + 1, config.log_every)
+    log_steps = range(
+        config.log_every,
+        config.log_every * len(history["val_loss"]) + 1,
+        config.log_every,
+    )
     plt.plot(log_steps, history["val_loss"], label="Val Loss")
     plt.xlabel("Step")
     plt.ylabel("MSE Loss")

@@ -24,7 +24,9 @@ def test_mlp_init(config):
 
 def test_mlp_forward_shape(config):
     """Test MLP forward pass output shape."""
-    model = MLP(hidden_dim=config.hidden_dim, output_dim=config.output_dim, num_layers=2)
+    model = MLP(
+        hidden_dim=config.hidden_dim, output_dim=config.output_dim, num_layers=2
+    )
     key = random.PRNGKey(0)
     params = model.init(key, jnp.ones((1, config.input_dim)))
 
@@ -51,7 +53,9 @@ def test_mlp_num_layers_affects_param_count(config):
     key = random.PRNGKey(0)
     dummy = jnp.ones((1, config.input_dim))
 
-    shallow = MLP(hidden_dim=config.hidden_dim, output_dim=config.output_dim, num_layers=1)
+    shallow = MLP(
+        hidden_dim=config.hidden_dim, output_dim=config.output_dim, num_layers=1
+    )
     deep = MLP(hidden_dim=config.hidden_dim, output_dim=config.output_dim, num_layers=3)
 
     shallow_params = shallow.init(key, dummy)
@@ -65,7 +69,9 @@ def test_mlp_num_layers_affects_param_count(config):
 
 def test_model_summary(config, capsys):
     """Test model_summary prints correctly."""
-    model = MLP(hidden_dim=config.hidden_dim, output_dim=config.output_dim, num_layers=2)
+    model = MLP(
+        hidden_dim=config.hidden_dim, output_dim=config.output_dim, num_layers=2
+    )
 
     model_summary(model, config)
     captured = capsys.readouterr()

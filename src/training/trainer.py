@@ -88,7 +88,9 @@ class Trainer:
         model: nn.Module,
         config: Config,
         loss_fn: Callable[[jnp.ndarray, jnp.ndarray], jnp.ndarray],
-        val_metric_fn: Optional[Callable[[jnp.ndarray, jnp.ndarray], jnp.ndarray]] = None,
+        val_metric_fn: Optional[
+            Callable[[jnp.ndarray, jnp.ndarray], jnp.ndarray]
+        ] = None,
     ) -> None:
         """Initializes the trainer.
 
@@ -151,7 +153,9 @@ class Trainer:
         Returns:
             A tuple ``(new_state, loss)``.
         """
-        return train_step(state, x, y, self.model, self.loss_fn, self.config.gradient_clip)
+        return train_step(
+            state, x, y, self.model, self.loss_fn, self.config.gradient_clip
+        )
 
     def evaluate(
         self, state: TrainState, x_val: jnp.ndarray, y_val: jnp.ndarray
@@ -167,9 +171,7 @@ class Trainer:
             A dict with ``"val_loss"`` and, if ``val_metric_fn`` was
             provided, ``"val_metric"``.
         """
-        predictions = self.model.apply(
-            {"params": state.params}, x_val, training=False
-        )
+        predictions = self.model.apply({"params": state.params}, x_val, training=False)
         val_loss = float(self.loss_fn(predictions, y_val))
         metrics: Dict[str, float] = {"val_loss": val_loss}
 
@@ -212,7 +214,9 @@ class Trainer:
         steps_per_epoch = max(num_train // batch_size, 1)
 
         total_steps = (
-            num_epochs * steps_per_epoch if num_epochs is not None else self.config.num_steps
+            num_epochs * steps_per_epoch
+            if num_epochs is not None
+            else self.config.num_steps
         )
 
         state = self.create_train_state(init_key, X_train[:1])
@@ -239,7 +243,10 @@ class Trainer:
                     self.history["val_loss"].append(metrics["val_loss"])
                     self.history["val_metric"].append(metrics.get("val_metric"))
 
-                    message = f"Step {step}/{total_steps} | loss: {loss:.4f} | val_loss: {metrics['val_loss']:.4f}"
+                    message = (
+                        f"Step {step}/{total_steps} | loss: {loss:.4f} | "
+                        f"val_loss: {metrics['val_loss']:.4f}"
+                    )
                     if "val_metric" in metrics:
                         message += f" | val_metric: {metrics['val_metric']:.4f}"
                     print(message)
@@ -250,7 +257,9 @@ class Trainer:
         self.state = state
         return self.history
 
-    def _log_wandb(self, step: int, loss: jnp.ndarray, metrics: Dict[str, float]) -> None:
+    def _log_wandb(
+        self, step: int, loss: jnp.ndarray, metrics: Dict[str, float]
+    ) -> None:
         """Logs metrics to Weights & Biases, if installed and active.
 
         Args:
