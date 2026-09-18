@@ -44,25 +44,36 @@ html, body {
   margin: 0;
   height: 100%;
   font-family: var(--font);
-  background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
 }
 
-body { display: flex; flex-direction: column; }
+body {
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(1100px 480px at 50% -8%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 62%),
+    var(--bg);
+}
 
 /* ---------------------------------------------------------------------
    Header
 --------------------------------------------------------------------- */
 
 .topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 28px;
+  padding: 0 28px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+}
+
+.topbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 840px;
+  margin: 0 auto;
+  padding: 14px 0;
 }
 
 .brand { display: flex; align-items: center; gap: 12px; }
@@ -116,7 +127,7 @@ body { display: flex; flex-direction: column; }
   flex: 1;
   display: flex;
   flex-direction: column;
-  max-width: 780px;
+  max-width: 840px;
   width: 100%;
   margin: 0 auto;
   min-height: 0;
