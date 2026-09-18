@@ -193,12 +193,30 @@
   // ---------------------------------------------------------------------
   let trainModalTask = "regression";
 
+  const TRAIN_ICONS = {
+    regression: '<path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/>',
+    classification:
+      '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>' +
+      '<rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+    architecture:
+      '<rect x="6" y="6" width="12" height="12" rx="2"/>' +
+      '<path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/>',
+    sliders:
+      '<line x1="4" y1="6" x2="14" y2="6"/><circle cx="17" cy="6" r="2"/>' +
+      '<line x1="10" y1="12" x2="20" y2="12"/><circle cx="7" cy="12" r="2"/>' +
+      '<line x1="4" y1="18" x2="14" y2="18"/><circle cx="17" cy="18" r="2"/>',
+  };
+
+  function trainIcon(name, cssClass) {
+    return `<svg class="${cssClass}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${TRAIN_ICONS[name]}</svg>`;
+  }
+
   function trainFormHtml(task) {
     const classificationFields =
       task === "classification"
         ? `
       <fieldset class="train-fieldset">
-        <legend><span class="chip-icon">🧮</span> Classificatie</legend>
+        <legend><span class="legend-icon">${trainIcon("classification", "")}</span> Classificatie</legend>
         <div class="train-field-row">
           <div class="field">
             <label for="tf-num_classes">Aantal klassen</label>
@@ -211,17 +229,17 @@
     return `
       <div class="train-task-toggle">
         <button type="button" class="train-task-btn ${task === "regression" ? "active" : ""}" data-task="regression">
-          <span class="chip-icon">📈</span> Regressie
+          <span class="task-icon">${trainIcon("regression", "")}</span> Regressie
         </button>
         <button type="button" class="train-task-btn ${task === "classification" ? "active" : ""}" data-task="classification">
-          <span class="chip-icon">🧮</span> Classificatie
+          <span class="task-icon">${trainIcon("classification", "")}</span> Classificatie
         </button>
       </div>
       <form id="train-form">
         <p class="train-error" id="train-form-error" hidden></p>
         ${classificationFields}
         <fieldset class="train-fieldset">
-          <legend><span class="chip-icon">🧠</span> Architectuur</legend>
+          <legend><span class="legend-icon">${trainIcon("architecture", "")}</span> Architectuur</legend>
           <div class="train-field-row">
             <div class="field">
               <label for="tf-input_dim">Input-dimensie</label>
@@ -244,7 +262,7 @@
           </div>
         </fieldset>
         <fieldset class="train-fieldset">
-          <legend><span class="chip-icon">⚙️</span> Training</legend>
+          <legend><span class="legend-icon">${trainIcon("sliders", "")}</span> Training</legend>
           <div class="train-field-row">
             <div class="field">
               <label for="tf-num_steps">Aantal stappen</label>

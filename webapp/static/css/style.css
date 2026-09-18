@@ -774,7 +774,11 @@ canvas.chat-chart { width: 100%; height: auto; display: block; }
 .modal-close svg { width: 16px; height: 16px; }
 .modal-close:hover { background: var(--accent-soft); color: var(--accent); }
 
-.modal-body { padding: 4px 20px 20px; overflow-y: auto; }
+.modal-body {
+  padding: 4px 20px 20px;
+  overflow-y: auto;
+  background: radial-gradient(480px 160px at 50% 0%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 75%);
+}
 
 .train-task-toggle {
   display: flex;
@@ -797,7 +801,8 @@ canvas.chat-chart { width: 100%; height: auto; display: block; }
   cursor: pointer;
   transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease, transform 0.1s ease;
 }
-.train-task-btn .chip-icon { font-size: 1.05rem; }
+.task-icon { width: 16px; height: 16px; display: flex; flex-shrink: 0; }
+.task-icon svg { width: 100%; height: 100%; }
 .train-task-btn:hover { border-color: var(--accent); color: var(--accent); }
 .train-task-btn.active {
   background: linear-gradient(155deg, var(--accent), var(--accent-hover));
@@ -808,7 +813,7 @@ canvas.chat-chart { width: 100%; height: auto; display: block; }
 }
 
 .train-fieldset {
-  border: none;
+  border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--surface-2);
   padding: 14px 16px 16px;
@@ -817,15 +822,27 @@ canvas.chat-chart { width: 100%; height: auto; display: block; }
 .train-fieldset legend {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   padding: 0;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   font-size: 0.74rem;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+.legend-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.legend-icon svg { width: 13px; height: 13px; }
 .train-field-row { display: flex; gap: 12px; margin-bottom: 10px; }
 .train-field-row:last-child { margin-bottom: 0; }
 .train-field-row .field { flex: 1; margin: 0; }
@@ -834,8 +851,15 @@ canvas.chat-chart { width: 100%; height: auto; display: block; }
   width: 100%;
   background: var(--surface);
   font-variant-numeric: tabular-nums;
+  border-color: var(--border);
 }
 .train-field-row .field input:focus { box-shadow: 0 0 0 3px var(--accent-soft); }
+.train-field-row .field input::-webkit-outer-spin-button,
+.train-field-row .field input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.train-field-row .field input[type="number"] { -moz-appearance: textfield; }
 
 .train-error {
   background: color-mix(in srgb, var(--danger) 8%, var(--surface));
