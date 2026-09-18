@@ -44,7 +44,7 @@ This opens `http://127.0.0.1:5000` automatically. On Windows you can also
 just double-click [run_server.bat](run_server.bat).
 
 There are also two minimal CLI helpers for quick checks without the UI:
-[play.py](play.py) (`play.bat`) trains a small model and lets you type
+[scripts/play.py](scripts/play.py) (`play.bat`) trains a small model and lets you type
 values to see predictions in the terminal, and `test.bat` runs the test
 suite.
 
@@ -57,6 +57,7 @@ src/
 ├── data/       Synthetic data generators (regression & classification)
 └── utils/      Config dataclass and shared utilities
 webapp/         Local Flask dashboard: train and test the model in a browser
+scripts/        Small standalone utilities (e.g. the play.py CLI demo)
 examples/       Standalone, runnable training scripts
 tests/          Unit tests for all core modules
 configs/        Default hyperparameters and W&B sweep configs
@@ -167,8 +168,8 @@ training pipeline:
 
 ## Contributing
 
-- Format code: `black src/ examples/ tests/ webapp/ play.py`
-- Lint: `flake8 src/ examples/ tests/ webapp/ play.py`
+- Format code: `black src/ examples/ tests/ webapp/ scripts/`
+- Lint: `flake8 src/ examples/ tests/ webapp/ scripts/`
 - Add tests for new features
 - Follow Google-style docstrings
 

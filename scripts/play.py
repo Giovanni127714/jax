@@ -1,13 +1,13 @@
 """Interactive playground: trains a small model, then lets you test it live.
 
 Usage:
-    python play.py
+    python scripts/play.py
 """
 
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import jax.numpy as jnp
 
