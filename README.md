@@ -31,17 +31,27 @@ python examples/02_classification.py
 
 ## Web UI
 
-The easiest way to use this project is through the local browser dashboard
-in [webapp/](webapp/) — no Python code required. It lets you configure and
-start a training run, watch loss/accuracy update live, and test the trained
-model interactively, all from the browser.
+The easiest way to use this project is through the local browser chat app in
+[webapp/](webapp/) — a real Claude-powered assistant that can hold an open
+conversation *and* train/test the model when you ask it to, with your login
+and chat history saved to MySQL.
+
+**Setup (one-time):**
+
+1. Make sure Laragon's MySQL is running (default: `root` user, no password —
+   the app creates its own `jax_chat` database automatically).
+2. Copy [.env.example](.env.example) to `.env` in the project root and fill
+   in `ANTHROPIC_API_KEY` (get one at [console.anthropic.com](https://console.anthropic.com)).
+   Without this, the chat still loads but replies with a clear message
+   telling you the key is missing — nothing crashes.
 
 ```bash
 python webapp/app.py
 ```
 
 This opens `http://127.0.0.1:5000` automatically. On Windows you can also
-just double-click [run_server.bat](run_server.bat).
+just double-click [run_server.bat](run_server.bat). Register an account on
+first visit; your conversation persists across logins.
 
 There are also two minimal CLI helpers for quick checks without the UI:
 [scripts/play.py](scripts/play.py) (`play.bat`) trains a small model and lets you type
@@ -56,7 +66,7 @@ src/
 ├── training/   Loss functions, metrics, TrainState, and the Trainer class
 ├── data/       Synthetic data generators (regression & classification)
 └── utils/      Config dataclass and shared utilities
-webapp/         Local Flask dashboard: train and test the model in a browser
+webapp/         Flask chat app (Claude + tool use, login, MySQL history)
 scripts/        Small standalone utilities (e.g. the play.py CLI demo)
 examples/       Standalone, runnable training scripts
 tests/          Unit tests for all core modules
