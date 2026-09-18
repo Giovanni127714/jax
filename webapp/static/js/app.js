@@ -1,6 +1,18 @@
 (() => {
   "use strict";
 
+  // If the session has gone stale (e.g. the account no longer exists),
+  // every API call starts returning 401 - bounce to login instead of
+  // leaving the page stuck showing "Er ging iets mis" forever.
+  const nativeFetch = window.fetch.bind(window);
+  window.fetch = async (...args) => {
+    const res = await nativeFetch(...args);
+    if (res.status === 401) {
+      window.location.href = "/login";
+    }
+    return res;
+  };
+
   const chatLog = document.getElementById("chat-log");
   const composerArea = document.getElementById("composer-area");
   const composerForm = document.getElementById("composer-form");
